@@ -1,0 +1,11 @@
+sam2-demo-gradio (2.0.0) bookworm; urgency=medium
+
+  * noe umd update to 2.0.0
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 01 Jul 2025 19:45:30 +0800
+
+sam2-demo-gradio (1.0.0) bookworm; urgency=medium
+
+  * Init sam2-demo-gradio
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Thu, 15 May 2025 14:21:55 +0900

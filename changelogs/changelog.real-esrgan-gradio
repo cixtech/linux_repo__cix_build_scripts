@@ -1,0 +1,17 @@
+real-esrgan-gradio (2.0.0) bookworm; urgency=medium
+
+  * noe umd update to 2.0.0
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 01 Jul 2025 19:44:59 +0800
+
+real-esrgan-gradio (1.0.1) bookworm; urgency=medium
+
+  * add numpy==2.0.2
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 27 May 2025 17:36:20 +0900
+
+real-esrgan-gradio (1.0.0) bookworm; urgency=medium
+
+  * Init real-esrgan-gradio
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 1 Apr 2025 20:25:38 +0800

@@ -1,0 +1,17 @@
+ort-genai-chat-gradio (1.0.2) bookworm; urgency=medium
+
+  * update tokenize len
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 19 Aug 2025 17:26:59 +0800
+
+ort-genai-chat-gradio (1.0.1) bookworm; urgency=medium
+
+  * update readme
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Wen, 6 Aug 2025 14:01:55 +0900
+
+ort-genai-chat-gradio (1.0.0) bookworm; urgency=medium
+
+  * Init ort-genai-chat-gradio
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Thu, 15 May 2025 14:21:55 +0900

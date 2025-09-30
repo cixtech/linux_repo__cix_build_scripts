@@ -1,0 +1,36 @@
+ai-album-streamlit (2.0.3) bookworm; urgency=medium
+
+  * fix abspath and new face/album problems.
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Wed, 6 Aug 2025 14:00:15 +0800
+
+ai-album-streamlit (2.0.2) bookworm; urgency=medium
+
+  * Update requirements
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Wed, 23 Jul 2025 16:02:14 +0800
+
+ai-album-streamlit (2.0.1) bookworm; urgency=medium
+
+  * Enable scan and photo add
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Thu, 17 Jul 2025 15:05:33 +0800
+
+ai-album-streamlit (2.0.0) bookworm; urgency=medium
+
+  * noe umd update to 2.0.0
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 01 Jul 2025 22:43:24 +0800
+
+ai-album-streamlit (1.0.1) bookworm; urgency=medium
+
+  * Add picquery feature
+  * Adjust cover display and sorting method
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Mon, 30 Jun 2025 17:52:34 +0900
+
+ai-album-streamlit (1.0.0) bookworm; urgency=medium
+
+  * Initial ai-album-streamlit.
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Thu, 26 Jun 2025 12:28:46 +0900

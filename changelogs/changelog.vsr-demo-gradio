@@ -1,0 +1,11 @@
+vsr-demo-gradio (2.0.0) bookworm; urgency=medium
+
+  * noe umd update to 2.0.0
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 01 Jul 2025 19:46:23 +0800
+
+vsr-demo-gradio (1.0.0) bookworm; urgency=medium
+
+  * Init vsr-demo-gradio
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 1 Apr 2025 20:25:38 +0800

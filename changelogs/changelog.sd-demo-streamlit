@@ -1,0 +1,23 @@
+sd-demo-streamlit (2.0.0) bookworm; urgency=medium
+
+  * noe umd update to 2.0.0
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 01 Jul 2025 19:45:54 +0800
+
+sd-demo-streamlit (1.0.2) bookworm; urgency=medium
+
+  *Update the SD demo script file.Fix the issue of 'unexpected tokenizer' after drawing several images.
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Mon, 28 Apr 2025 15:07:49 +0800
+
+sd-demo-streamlit (1.0.1) bookworm; urgency=medium
+
+  * Update for NOE_Engine.py
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Mon, 17 Mar 2025 20:20:26 +0800
+
+sd-demo-streamlit (1.0.0) bookworm; urgency=medium
+
+  * Init sd-demo-streamlit
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 21 Jan 2025 17:51:43 +0800
