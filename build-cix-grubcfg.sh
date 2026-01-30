@@ -30,10 +30,10 @@ do_build() {
     if [[ "${ACPI}" == "0" ]]; then
         cp -pf $PATH_OUT/sky1-${dt}.dtb $PATH_OUT_DEB_PACKAGES/cix-grubcfg/boot/
         sed -i s/sky1-evb.dtb/sky1-${dt}.dtb/g $PATH_OUT_DEB_PACKAGES/cix-grubcfg/etc/grub.d/09_cix_linux
-        replace_or_add_line "GRUB_CMDLINE_LINUX=" "GRUB_CMDLINE_LINUX=\"console=ttyAMA2,115200 ${EFI_CONFIG}earlycon=pl011,0x040d0000 loglevel=4 arm-smmu-v3.disable_bypass=0 splash acpi=off pcie_aspm=off\"" "$PATH_OUT_DEB_PACKAGES/cix-grubcfg/etc/default/grub.d/cix_grub.cfg"
+        replace_or_add_line "GRUB_CMDLINE_LINUX=" "GRUB_CMDLINE_LINUX=\"console=ttyAMA2,115200 ${EFI_CONFIG}earlycon=pl011,0x040d0000 kasan=off loglevel=4 arm-smmu-v3.disable_bypass=0 splash acpi=off\"" "$PATH_OUT_DEB_PACKAGES/cix-grubcfg/etc/default/grub.d/cix_grub.cfg"
      else
         replace_or_add_line "devicetree" "\ " "$PATH_OUT_DEB_PACKAGES/cix-grubcfg/etc/grub.d/09_cix_linux"
-        replace_or_add_line "GRUB_CMDLINE_LINUX=" "GRUB_CMDLINE_LINUX=\"console=ttyAMA2,115200 ${EFI_CONFIG}earlycon=pl011,0x040d0000 loglevel=4 arm-smmu-v3.disable_bypass=0 cma=640M splash acpi=force pcie_aspm=off\"" "$PATH_OUT_DEB_PACKAGES/cix-grubcfg/etc/default/grub.d/cix_grub.cfg"
+        replace_or_add_line "GRUB_CMDLINE_LINUX=" "GRUB_CMDLINE_LINUX=\"console=ttyAMA2,115200 ${EFI_CONFIG}earlycon=pl011,0x040d0000 kasan=off loglevel=4 arm-smmu-v3.disable_bypass=0 cma=640M splash acpi=force\"" "$PATH_OUT_DEB_PACKAGES/cix-grubcfg/etc/default/grub.d/cix_grub.cfg"
     fi
     if [[ ${BUILD_MODE} != "debug" ]]; then
         sed -i '/GRUB_CMDLINE_LINUX_DEFAULT/d' "$PATH_OUT_DEB_PACKAGES/cix-grubcfg/etc/default/grub.d/cix_grub.cfg"

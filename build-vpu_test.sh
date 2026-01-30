@@ -8,6 +8,9 @@
 #
 
 DEPENDENT_MODULES="build-vpu_driver.sh"
+if [[ "$DRM" == "enable" ]]; then
+    DEPENDENT_MODULES="${DEPENDENT_MODULES} build-cas-tas.sh"
+fi
 
 readonly DO_DESC_build="build linux vpu unit test and embed into debian system"
 do_build() {
@@ -22,6 +25,10 @@ do_build() {
     UNIT_TEST_PATH=${PATH_ROOT}/component/cix_opensource/cix_unit_test
 
     export KDIR=${PATH_LINUX}
+    if [[ "$DRM" == "enable" ]]; then
+        export CIX_DRM_ENABLE=y
+        export TEEC_EXPORT=${PATH_ROOT}/component/cix_opensource/tee_sdk/optee_client_export
+    fi
     cd ${UNIT_TEST_PATH}/cix_vpu_test
     scons
     cp bin/aarch64-none-linux-gnu/* ${install_dir}

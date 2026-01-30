@@ -99,10 +99,10 @@ do_build() {
                 rm -rf "${PATH_OUT}/debs_tmp/linux-headers"
             fi
             mkdir "${PATH_OUT}/debs_tmp/linux-headers"
-            local def_file=$(ls ${PATH_DEB}/linux-headers*.deb)
-            dpkg-deb -R "${def_file}" "${PATH_OUT}/debs_tmp/linux-headers"
+            local deb_file=$(ls ${PATH_DEB}/linux-headers*.deb)
+            dpkg-deb -R "${deb_file}" "${PATH_OUT}/debs_tmp/linux-headers"
             cp -rfp ${PATH_ROOT}/build-scripts/debian/dkms/linux/scripts/* ${PATH_OUT}/debs_tmp/linux-headers/usr/src/linux-headers-*/scripts/
-            dpkg-deb -b --root-owner-group "${PATH_OUT}/debs_tmp/linux-headers" "${def_file}"
+            dpkg-deb -b --root-owner-group "${PATH_OUT}/debs_tmp/linux-headers" "${deb_file}"
         fi
     fi
     cd -
@@ -113,7 +113,8 @@ do_build() {
         ;;
     esac
 
-    cp -f "${path_kernel}/arch/arm64/boot/Image" "${PATH_OUT}/"
+    sign_file "${path_kernel}/arch/arm64/boot/Image" "${PATH_OUT}/Image"
+    #cp -f "${path_kernel}/arch/arm64/boot/Image" "${PATH_OUT}/"
 
     record_compile "${path_kernel}"
 }

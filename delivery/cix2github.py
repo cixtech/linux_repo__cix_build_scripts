@@ -13,184 +13,14 @@
 # Revision: original v1.0
 #
 
+import string
 import os, sys
 import requests
 import base64
 import json
 import time
 import subprocess
-
-import logging
-import string
 import random
-from typing import Any, Tuple, List
-
-logger = logging.Logger(__name__)
-
-class GitClient(object):
-
-    def __init__(self, cwd=os.getcwd()):
-        self._cwd = cwd
-
-    def run(self, cmd, shell=False)->str:
-        ret = subprocess.run(args=cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, shell=shell, encoding="utf-8", cwd=self._cwd)
-        if ret.returncode != 0:
-            raise Exception(f"Git command err:cwd: {self._cwd} cmd:{' '.join(cmd)} , err: {ret.stderr}, {ret.stdout}")
-        else:
-            return ret.stdout
-        
-    def init(self) -> str:
-        command = ['git', 'init', '.']
-        return self.run(cmd=command)
-        
-    def clone(self, url: str, repo: str, branch:str="master", new_remote_name=None, dest=None, single_branch=False):
-        
-        remote = f'ssh://{url}/{repo}'
-        command = ['git', 'clone']
-        if single_branch:
-            command.append("--single-branch")
-        command.extend(['-b', branch, remote])
-        if new_remote_name:
-            command.extend(["--origin", "release-git"])
-        
-        if dest:
-            command.append(dest)
-        return self.run(cmd=command)
-
-    def push(self, remote: str, branch: str, skip_validation=False, config=None):
-        # git push  origin branch_name
-        cmd = ['git']
-        if config:
-            cmd.extend(['-c', config])
-        cmd.append('push')
-        if skip_validation:
-            cmd.extend(['-o', 'skip-validation'])
-
-        cmd.extend([remote, branch])
-        logger.info(f"gitpush: {' '.join(cmd)}")
-        return self.run(cmd=cmd)
-    
-    def add(self, file:str):
-        cmd = ['git', 'add', file]
-        return self.run(cmd=cmd)
-
-    def commit(self, commit_info: str):
-        cmd = [
-            'git',
-            'commit',
-            '--allow-empty',
-            '-m',
-            commit_info    
-        ]
-        return self.run(cmd=cmd)
-    
-    def amend_commit(self):
-        cmd = ['git', 'commit', '--amend', '-CHEAD']
-        return self.run(cmd=cmd)
-
-    def commit_by_file(self, message: str, amend=False):
-
-        commit_file = ''.join(random.choices(string.ascii_letters, k=8))
-        tmp_file = f"/tmp/{commit_file}"
-
-        with open(tmp_file, "w") as f:
-            f.write(message)
-
-        cmd = ["git", "commit",  "--allow-empty", "-F", tmp_file] 
-        if amend :
-            cmd.append("--amend")
-        try:
-            self.run(cmd=cmd)
-        except Exception:
-            raise Exception
-        finally:
-            os.remove(tmp_file)
-
-    def set_cwd(self, cwd: str):
-        self._cwd = cwd
-    
-    def check_diff(self):
-        cmd = ['git','status']
-
-        return self.run(cmd=cmd)
-    
-    def add_remote(self, remote_name:str, remote_url:str):
-        try:
-            remove_remote_cmd = ["git", "remote", "remove", remote_name]
-            self.run(cmd=remove_remote_cmd)
-        except Exception as err:
-            ...
-        cmd = ["git", "remote", "add", remote_name, remote_url]
-        return self.run(cmd=cmd)
-    
-    def checkout(self, branch:str, options:List[str], revision=None):
-        cmd = ["git", "checkout"]
-        cmd.extend(options)
-        cmd.append(branch)
-        if revision:
-            cmd.append(revision)
-
-        return self.run(cmd=cmd)
-    
-    def cherry_pick(self, revision:str):
-        """
-        1. git cherry-pick 
-        
-        """
-        cmd = ["git", "cherry-pick", revision]
-        return self.run(cmd=cmd)
-    
-    def reset(self, revision:str, hard=False):
-        """
-        git reset --soft/--hard revision
-        """
-        cmd = ["git", "reset"]
-        if hard:
-            cmd.append("--hard")
-        else:
-            cmd.append("--soft")
-        cmd.append(revision) 
-        return self.run(cmd=cmd)
-    
-    def soft_reset(self, revision:str):
-        return self.reset(revision=revision, hard=False)
-    
-    def hard_reset(self, revision:str):
-        return self.reset(revision=revision, hard=True)
-    
-    def get_commit_id(self) -> str:
-        cmd = ["git", "log", "-n1", "--format=%H"]
-        out = self.run(cmd=cmd)
-        return out.strip()
-    
-    def get_first_commit_id(self) -> str:
-        cmd = 'git log --reverse --pretty=format:"%H" | head -n 1'
-        out = self.run(cmd=cmd, shell=True)
-        return out.strip()
-
-    def get_commit_from_heads(self, head:str) -> str:
-        cmd = ["git", "log", "-n1", head, "--format=%H"]
-        out = self.run(cmd=cmd)
-        return out.strip()
-    
-    def get_commits_id(self, after_commit:str, before_commit:str) -> List:
-        cmd = ["git", "log", f"{after_commit}..{before_commit}", "--format=%H"]
-        out = self.run(cmd=cmd)
-        res = []
-        for commit_id in out.split('\n'):
-            if commit_id:
-                res.append(commit_id)
-        return res
-    
-    def get_tree(self, branch:str) -> str:
-        cmd = ["git", "log", "-n1", "--format=%T"]
-        cmd.append(branch)
-        out = self.run(cmd=cmd)
-        return out.split()
-    
-    def fetch_branch(self, remote_name:str, branch:str):
-        cmd = ["git", "fetch", remote_name, branch]
-        return self.run(cmd=cmd)
 
 ###########################################################################################################
 
@@ -237,21 +67,29 @@ def getValue(str, key):
     return '', 0, 0
 
 def runApp(cmd):
-    result = ''
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
-    try:
-        lines = 0
-        while True:
-            line = proc.stdout.readline()
-            if not line and proc.poll() != None:
-                break
-            result = result + line.decode('utf-8')
-            lines = lines + 1
-    except Exception:
-        print(f'run [{cmd}] exception')
-    finally:
-        proc.stdout.close()
-    return result
+    ret = subprocess.run(args=cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, shell=True, encoding="utf-8")
+    if ret.returncode != 0:
+        #raise Exception(f"Git command cmd:{cmd} , err: {ret.stderr}, {ret.stdout}")
+        info = f"Git command cmd:{cmd} , err: {ret.stderr}, {ret.stdout}\n"
+        print(info)
+        return info
+    else:
+        return ret.stdout
+    # result = ''
+    # proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+    # try:
+    #     lines = 0
+    #     while True:
+    #         line = proc.stdout.readline()
+    #         if not line and proc.poll() != None:
+    #             break
+    #         result = result + line.decode('utf-8')
+    #         lines = lines + 1
+    # except Exception:
+    #     print(f'run [{cmd}] exception')
+    # finally:
+    #     proc.stdout.close()
+    # return result
 
 def loadConfig(file):
     content = ''
@@ -277,16 +115,16 @@ def loadConfig(file):
                     continue
                 else:
                     ignore = False
-            if strip.startswith('<project '):
+            elif strip.startswith('<project '):
                 if not ext:
-                    #content += f'  <project path="ext" name="{REPO_NAME}_ext", groups="cix", revision="{BRANCH_NAME}" />\n'
-                    projects.append({'name': f'{REPO_NAME}_ext', 'path': 'ext', 'revision': BRANCH_NAME})
+                    #content += f'  <project path="ext" name="ext" groups="cix" revision="{BRANCH_NAME}" />\n'
+                    projects.append({'path': 'ext', 'name': f'ext', 'revision': BRANCH_NAME})
+                    content += f'  <project path="ext_debs" name="ext_debs" groups="cix" revision="{BRANCH_NAME}" />\n'
+                    projects.append({'path': 'ext_debs', 'name': f'ext_debs', 'revision': BRANCH_NAME})
                     ext = True
                 path, iStart, iEnd = getValue(line, 'path')
                 name, iStart, iEnd = getValue(line, 'name')
                 revision, iStart, iEnd = getValue(line, 'revision')
-                if DEBUG:
-                    revision = 'main' # for debug test 
                 name = name.replace('/', '__')
                 if strip.endswith('/>'):
                     content += f'  <project path="{path}" name="{name}" groups="cix" revision="{revision}" />\n'
@@ -321,27 +159,34 @@ def gitExists(gitName):
         print(f'Error: {e}')
         return False
 
-def branchExists(gitName, branch):
+def revisionExists(gitName, revision):
     try:
-        response = requests.get(f'https://api.github.com/repos/{GITHUB_OWNER}/{gitName}/git/ref/heads/{branch}',
+        url = f'https://api.github.com/repos/{GITHUB_OWNER}/{gitName}/git/{revision}'
+        response = requests.get(url=url,
                                 headers={
                                     'Authorization': f'Bearer {GITHUB_TOKEN}',
                                     'Accept': 'application/vnd.github.v3+json'
                                 })
         if response.status_code in [200, 201]:
-            print(f'{branch} exists!')
+            print(f'{revision} exists!')
             return True
         elif response.status_code == 404:
-            print(f'{branch} does not exist!')
+            print(f'{revision} does not exist!')
             return False
         else:
-            print(f'check branch {branch} fail: {response.status_code}')
+            print(f'check revision {revision} fail: {response.status_code}')
             return False
     except requests.exceptions.RequestException as e:
         print(f'Error: {e}')
         return False
 
-def createGit(gitName):
+def branchExists(gitName, branch):
+    return revisionExists(gitName=gitName,revision=f'ref/heads/{branch}')
+
+def tagExists(gitName, tag):
+    return revisionExists(gitName=gitName,revision=f'ref/tags/{tag}')
+
+def createGit(gitName, private = False):
     try:
         if len(GITHUB_ORG_NAME) > 0:
             url = f'https://api.github.com/orgs/{GITHUB_OWNER}/repos'
@@ -351,7 +196,7 @@ def createGit(gitName):
                                 json={
                                     'name': gitName,
                                     'description': f'Create {gitName} via api',
-                                    'private': False,
+                                    'private': private,
                                     'auto_init': True
                                     },
                                 headers={
@@ -401,18 +246,11 @@ def getFileSHA(gitName, remoteFile, branch = 'main'):
         print(f'Error: {e}')
         return ''
 
-def createBranch(gitName, newBranch, baseBranch = 'main'):
-    if branchExists(gitName, newBranch):
-        return True
-    sha = getBranchSHA(gitName, baseBranch)
-    if len(sha) < 1:
-        print(f'Cannot get the sha form the branch {baseBranch}')
-        return False
-    print(f'main sha: {sha}')
+def createRevision(gitName, revision, sha):
     try:
         response = requests.post(f'https://api.github.com/repos/{GITHUB_OWNER}/{gitName}/git/refs',
                                 json={
-                                    'ref': f'refs/heads/{newBranch}',
+                                    'ref': f'{revision}',
                                     'sha': sha
                                     },
                                 headers={
@@ -420,14 +258,40 @@ def createBranch(gitName, newBranch, baseBranch = 'main'):
                                     'Accept': 'application/vnd.github.v3+json'
                                 })
         if response.status_code in [200, 201]:
-            print(f'create branch {newBranch} success!')
             return True
         else:
-            print(f'create branch {newBranch} fail: {response.json()}')
             return False
     except requests.exceptions.RequestException as e:
         print(f'Error: {e}')
         return False
+
+def createBranch(gitName, newBranch, baseBranch = 'main'):
+    if branchExists(gitName, newBranch):
+        return True
+    sha = getBranchSHA(gitName, baseBranch)
+    if len(sha) < 1:
+        print(f'Cannot get the sha form the branch {baseBranch}')
+        return False
+    flag = createRevision(gitName=gitName, revision=f'refs/heads/{newBranch}', sha=sha)
+    if flag:
+        print(f'create branch {newBranch} success!')
+    else:
+        print(f'failed to create branch: {newBranch}')
+    return flag
+
+def createTag(gitName, newTag, baseBranch = 'main'):
+    if tagExists(gitName, newTag):
+        return True
+    sha = getBranchSHA(gitName, baseBranch)
+    if len(sha) < 1:
+        print(f'Cannot get the sha form the branch {baseBranch}')
+        return False
+    flag = createRevision(gitName=gitName, revision=f"refs/tags/{newTag}", sha=sha)
+    if flag:
+        print(f'create tag {newTag} success!')
+    else:
+        print(f'failed to create tag: {newTag}')
+    return flag
 
 def commitGitFile(content, gitName, remoteFile, branch = 'main'):
     sha = getFileSHA(gitName, remoteFile, branch)
@@ -453,6 +317,69 @@ def commitGitFile(content, gitName, remoteFile, branch = 'main'):
     except requests.exceptions.RequestException as e:
         print(f'Error: {e}')
         return False
+
+def doGitHub(content, projects, private = False):
+    # create repo manifests
+    if not gitExists(REPO_NAME):
+        createGit(REPO_NAME, private)
+
+    # create repo branch
+    createBranch(REPO_NAME, BRANCH_NAME, 'main')
+
+    # commit the default.xml
+    content = base64.b64encode(content.encode()).decode()
+    #print(content)
+    commitGitFile(content, REPO_NAME, 'default.xml', BRANCH_NAME)
+
+    time.sleep(0.2)
+    # process all projects
+    for project in projects:
+        time.sleep(0.3)
+        if not gitExists(project['name']):
+            createGit(project['name'], private)
+
+    # create rc_tag for cix_ext
+    tmp = runApp(f'grep "EX_VERSION" {PATH_WORKSPACE}/build-scripts/build-all.sh')
+    tag, iStart, iEnd = getValue(tmp, 'EX_VERSION')
+    if len(tag) > 0:
+        print(f'create the tag "{tag}" for ext')
+        createTag('ext', tag)
+    else:
+        print('Error: cannot create the tag for ext')
+
+def doDebs():
+    dstPath = os.path.join(PATH_WORKSPACE, 'ext_debs')
+    if not os.path.exists(dstPath):
+        os.mkdir(dstPath)
+    for entry in os.scandir(os.path.join(PATH_WORKSPACE, 'ext', 'output', 'cix_evb', 'debs')):
+        if entry.is_file():
+            if entry.path.endswith('.deb'): # and entry.name.startswith('cix'):
+                path = os.path.join(dstPath, entry.name[0:len(entry.name)-4])
+                runApp(f'dpkg-deb -R {entry.path} {path}')
+                if doLargeFile(path, path, 100 * 1024 * 1024):
+                    runApp(f'rm -rf {path}')
+    os.chdir(dstPath)
+    runApp(f'git init')
+    runApp(f'git checkout -b "{BRANCH_NAME}"')
+    runApp(f'git add .')
+    runApp(f'git commit -m "update the ext_debs"')
+
+def doLargeFile(root, path, maxSize, exist = False):
+    for entry in os.scandir(path):
+        if entry.is_file() and entry.stat().st_size > maxSize:
+            file = entry.path[len(root):].lstrip('/').lstrip('\\')
+            print(f'file {entry.path} size: {entry.stat().st_size} > {maxSize}')
+
+            #check the file if exists in git 
+
+            # os.chdir(root)
+            # res = runApp(f'git lfs track "{file}"')
+            # print(f'git lfs track "{file}": {res}')
+            exist = True
+        elif entry.is_dir() and entry.name != '.git':
+            if doLargeFile(root, entry.path, maxSize, exist):
+                exist = True
+    return exist
 
 if __name__ == '__main__':
     args = sys.argv
@@ -499,16 +426,10 @@ if __name__ == '__main__':
     if len(REPO_NAME) < 1:
         print(f'Please input the repo name with -r')
         sys.exit(0)
-    if len(REPO_NAME) < 1:
-        print(f'Please input the repo name with -r')
-        sys.exit(0)
     if len(BRANCH_NAME) < 1:
         print(f'Please input the branch name with -b')
         sys.exit(0)
-    # if len(GITHUB_ORG_NAME) < 1:
-    #     print(f'Please input the organization name with -n')
-    #     sys.exit(0)
-    
+
     if len(GITHUB_ORG_NAME) > 0:
         GITHUB_OWNER = GITHUB_ORG_NAME
     else:
@@ -519,48 +440,83 @@ if __name__ == '__main__':
         sys.exit(0)
 
     PATH_HOME = os.path.realpath(os.path.join(__file__, '..'))
-    PATH_WORKSPACE = os.path.realpath(os.path.join(CONFIG_FILE, '..', '..'))
-        
+    PATH_WORKSPACE = os.path.realpath(os.path.join(CONFIG_FILE, '..', '..', '..'))
     print(f'PATH_HOME: {PATH_HOME}')
     print(f'PATH_WORKSPACE: {PATH_WORKSPACE}')
-    
+
     content, projects = loadConfig(CONFIG_FILE)
-    print(content)
-    print(projects)
+    #print(content)
+    #print(projects)
 
-    # create repo manifests    
-    if not gitExists(REPO_NAME):
-        createGit(REPO_NAME)
+    doDebs()
 
-    # create repo branch
-    createBranch(REPO_NAME, BRANCH_NAME, 'main')
-
-    # commit the default.xml
-    content = base64.b64encode(content.encode()).decode()
-    print(content)
-    commitGitFile(content, REPO_NAME, 'default.xml', BRANCH_NAME)
-    
-    time.sleep(0.5)
-    # process all projects
-    i = 0
-    count = len(projects)
-    while i < count:
-        time.sleep(0.5)
-        if not gitExists(projects[i]['name']):
-            createGit(projects[i]['name'])
-        i = i + 1
-
-    if DEBUG:
+    hasLargeFile = False
+    for project in projects:
+        if project['path'] != 'ext':
+            path = os.path.join(PATH_WORKSPACE, project['path'])
+            if os.path.exists(path):
+                os.chdir(path)
+                if doLargeFile(path, path, 100 * 1024 * 1024):
+                    hasLargeFile = True
+    if hasLargeFile:
+        print('The large files cannot be supported (> 100M)')
         exit(0)
 
-    i = 0
-    count = len(projects)
-    while i < count:
-        path = os.path.join(PATH_WORKSPACE, projects[i]['path'])
-        if os.path.exists(path):
-            gitClient = GitClient(cwd=path)
-            gitClient.add_remote('github', f'https://github.com/{GITHUB_OWNER}/{projects[i]['name']}')
-            gitClient.push(remote='github', branch=projects[i]['revision'], skip_validation=True)
+    if DEBUG:
+        doGitHub(content, projects, private=True)
+    else:
+        doGitHub(content, projects, private=False)
+
+    for project in projects:
+        if project['path'] != 'ext':
+            path = os.path.join(PATH_WORKSPACE, project['path'])
+            if os.path.exists(path):
+                os.chdir(path)
+                print(f'-----{path}-----')
+                res = runApp(f'git checkout {project["revision"]}')
+                print(f'git checkout {project["revision"]} : {res}')
+                #runApp(f'git lfs pull')
+                # if doLargeFile(path, path, 100 * 1024 * 1024): # file which size is larger than 100M will use lfs
+                #     os.chdir(path)
+                #     res = runApp('git add .')
+                #     print(f'git add . : {res}')
+                #     res = runApp('git commit --amend -CHEAD')
+                #     #print(f'git commit --amend -CHEAD : {res}')
+
+                os.chdir(path)
+                res = runApp(f'git remote | grep github')
+                if len(res) > 0:
+                    runApp(f'git remote remove github')
+                res = runApp(f'git remote add github ssh://github.com/{GITHUB_OWNER}/{project["name"]}')
+                print(f'git remote add github : {res}')
+                if project['path'] == 'linux' and not branchExists(project['name'], project["revision"]):
+                    commitID = runApp("git log -n1 HEAD~8000 | grep commit | head -1 | awk '{print $2}'")
+                    if len(commitID) > 0:
+                        temp = ''.join(random.choices(string.ascii_letters, k=8))
+                        print(f'git checkout -b {temp} {commitID}')
+                        runApp(f'git checkout -b {temp} {commitID}')
+                        print(f'git push github 1: {temp}:{project["revision"]}')
+                        runApp(f'git push -o skip-validation github {temp}:{project["revision"]}')
+
+                        print(f'git checkout {project["revision"]}')
+                        runApp(f'git checkout {project["revision"]}')
+                        print(f'git push github 2: {project["revision"]}')
+                        runApp(f'git push -o skip-validation github {project["revision"]}')
+                    else:
+                        print(f'git push github: {project["revision"]}')
+                        runApp(f'git push -o skip-validation github {project["revision"]}')
+                else:
+                    print(f'git push github: {project["revision"]}')
+                    runApp(f'git push -o skip-validation github {project["revision"]}')
+            else:
+                print(f'path {path} does not exist!')
         else:
-            print(f'path {path} does not exist!')
-        i = i + 1
+            path = os.path.join(PATH_WORKSPACE, project['path'])
+            if os.path.exists(path):
+                path_7z = os.path.join(PATH_WORKSPACE, 'ext_7z')
+                if not os.path.exists(path_7z):
+                    os.mkdir(path_7z)
+                os.chdir(PATH_WORKSPACE)
+                runApp(f'7z a -v1g {path_7z}/cix_ext.7z ext')
+
+    os.chdir(PATH_WORKSPACE)

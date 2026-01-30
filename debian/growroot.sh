@@ -1,9 +1,11 @@
 #!/bin/sh
+
 trap '
 if [ -e "/tmp/rootfs" ]; then
     umount "/tmp/rootfs" || true;
 fi
 ' EXIT
+
 check_size() {
     local str=$1
     if expr "$str" : ".*G$" >/dev/null; then
@@ -15,6 +17,7 @@ check_size() {
     fi
     echo ${str}
 }
+
 # Grow root. This will expand the root partition to the total disk
 grow_root() {
     echo "auto grow the root size"
@@ -25,18 +28,33 @@ grow_root() {
         local device=$root
         case $device in
         *[0-9])
-        totalSize=$((${totalSize} * 512 / 1000 / 1000 / 1000))
-        gptSize=$((${gptSize} * 512 / 1000 / 1000 / 1000))
+            device=${device:0:${#device}-1}
+            case $device in
+            *p)
+                device=${device:0:${#device}-1}
+                ;;
+            esac
+            ;;
+        esac
+        echo "root uuid: ${uuid}, device: ${device}, root: ${root}"
+        local mounted_content=$(mount -l | grep "$root")
+        if [ "${mounted_content}" != "" ]; then
+            echo "$root has been mounted. exit now"
+            return
+        fi
+        local totalSize=$(cat /proc/partitions | grep "$(echo ${device} | awk -F '/' '{print $NF}')" | head -n 1 | awk '{print $3}')
+        local gptSize=$(/bin/cix-gpt -f ${device} --dump | grep "backup lba: " | awk -F "backup lba: " '{print $2}')
+        totalSize=$((${totalSize} / 1024 / 1024))
+        gptSize=$((${gptSize} * 512 / 1024 / 1024 / 1024))
         if [ ! -e /tmp/rootfs ]; then
             mkdir -p /tmp/rootfs
         fi
         mount $root /tmp/rootfs
-        local dfSize=$(($(df | grep $root | awk '{print $2}') * 1024 / 1000 / 1000 / 1000))
+        local dfSize=$(($(df | grep $root | awk '{print $2}') / 1024 / 1024))
         umount /tmp/rootfs
         rm -rf /tmp/rootfs
-        local fdiskSize=$(fdisk $device -l | grep root | awk -F "G" '{print $1}' | awk '{print $4}')
-        dfSize=$(check_size $(echo $dfSize | awk -F "." '{print $1}'))
-        fdiskSize=$(check_size $(echo $fdiskSize | awk -F "." '{print $1}'))
+        local fdiskSize=$(cat /proc/partitions | grep "$(echo ${root} | awk -F '/' '{print $NF}')" | head -n 1 | awk '{print $3}')
+        fdiskSize=$((${fdiskSize} / 1024 / 1024))
         echo "dfSize=${dfSize}, fdiskSize=${fdiskSize} totalSize=${totalSize} gptSize=${gptSize}"
         if [ $dfSize -lt $(($fdiskSize - 50)) ]; then
             e2fsck -f -y $root

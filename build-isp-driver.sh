@@ -27,7 +27,11 @@ do_build() {
         install_dir=${build_deb_dir}/lib/modules/${linux_version}/extra
         mkdir -p ${install_dir}
         cp ${DRV_DIR}/${MODULE}.ko ${install_dir}
-        create_cix_deb "${pkg_Name}"
+        debian_dir=${build_deb_dir}/DEBIAN
+        mkdir -p "$build_deb_dir/DEBIAN"
+        echo "#!/bin/bash" > ${debian_dir}/postinst
+        echo "depmod ${linux_version} -a" >> ${debian_dir}/postinst
+	create_cix_deb "${pkg_Name}"
         # finish build deb package
     else
         echo error ${MODULE}.ko module not exist

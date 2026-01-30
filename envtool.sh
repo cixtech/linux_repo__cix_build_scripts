@@ -6,6 +6,8 @@
 #  and contain its proprietary and confidential information.
 #
 
+GITHUB_EXT_URL="https://api.github.com/repos/cixtech/ext/releases"
+
 PARALLEL_GROUP="all"
 BUILD_MODE="release"
 PLATFORM="cix"
@@ -37,14 +39,21 @@ SYSTEMD_TARGET="graphical" #graphical, multi-user
 DT="evb" #dtb file in iso
 CUSTOMER_HW_INFO="evb_p0" #customer hw information：evb_p0, radxa_p0, orange_pi_p0
 
+SIGN_KEY="" #the key file for signature
+SIGN_CERT="" #the cert file for signature
+
+ENABLE_SQUASH_FS="false" #true or false
+ENABLE_OVERLAY_FS="false" #true or false
+
 RED=${RED-\e[31m}
 NC=${NC-\e[0m}
 
 EX_CUSTOMER="customer_linux"
 EX_PROJECT="2025q3"
-EX_VERSION="rc4.2"
+EX_VERSION="25q4_rc3.3"
 EX_NEXUS_USER="svc.public"
 EX_NEXUS_PASS="svc.public"
+USERDATA_RESIZE="enable"
 
 #show env params
 function _showParams() {
@@ -71,7 +80,7 @@ function _showParams() {
     echo -e "iso(-i):               \e[32m$ISO_INSTALLER\e[0m (0: no iso, 1: generate iso disk)"
     echo -e "nexus(-x):             \e[32m$NEXUS_SITE\e[0m (sh: shanghai, zj: zhangjiang, wuh: wuhan, szv: suzhou, ksh: kunshan, wux: wuxi, [release: release, public: customer])"
     echo -e "os debian mode(-o):    \e[32m$DEBIAN_MODE\e[0m (0: without debian, 1: gnome+xfce, 4: console, 5: openkylin2.0-Release, 6:deepin, 7:openkylin-alpha, 8:kylin-v10)"
-    echo -e "fastboot load(-l):     \e[32m$FASTBOOT_LOAD\e[0m (disable, ddr, nvme, spi, usb)"
+    echo -e "fastboot load(-l):     \e[32m$FASTBOOT_LOAD\e[0m (disable, ddr, nvme, spi)"
     echo -e "network(-w):           \e[32m$NETWORK\e[0m (internal, open)"
     echo -e "root free size(-R):    \e[32m$root_free_size\e[0m (add the root partition free size with unit G bytes)"
     echo -e "swap size(-W):         \e[32m$swap_size\e[0m (swap partition size with unit G bytes [0 is no swap])"
@@ -81,7 +90,11 @@ function _showParams() {
     echo -e "kms project id(-U):    \e[32m$KMS_PROJECT_ID\e[0m"
     echo -e "dt(-D):                \e[32m$DT\e[0m"
     echo -e "auto guid(-G):         \e[32m$AUTO_GUID\e[0m (0: fixed guid, 1: auto guid)"
-    echo -e "customer hw info(-C):  \e[32m$CUSTOMER_HW_INFO\e[0m (evb_p0, radxa_p0, orange_pi_p0)"
+    echo -e "sign key(-H):          \e[32m$SIGN_KEY\e[0m"
+    echo -e "sign cert(-I):         \e[32m$SIGN_CERT\e[0m"
+    echo -e "userdata resize(-u):   \e[32m$USERDATA_RESIZE\e[0m (disable, enable)"
+    echo -e "squash fs(-Q):         \e[32m$ENABLE_SQUASH_FS\e[0m (true or false)"
+    echo -e "overlay fs(-O):        \e[32m$ENABLE_OVERLAY_FS\e[0m (true or false), the data partition is required if true"
 }
 
 function download() {
@@ -203,20 +216,62 @@ function download_binary_files() {
 }
 
 function updateres() {
-    local _nexus="$NEXUS_SITE"
-    if [[ "${_nexus}" != "" ]]; then
-        if [[ "${_nexus}" != "sh" ]]; then
-            _nexus="${_nexus}-"
-        else
-            _nexus="zj-"
+    cd "${PATH_ROOT}/build-scripts"
+    local githubTag="$(git remote -v | grep "github.com")X"
+    cd -
+    if [[ "${githubTag}" != "X" ]]; then
+        if [[ ! -e "${PATH_ROOT}/ext_7z" ]]; then
+            mkdir "${PATH_ROOT}/ext_7z"
         fi
+        curl ${GITHUB_EXT_URL} | jq ".[] | select(.tag_name == \"${EX_VERSION}\") | .assets" > "${PATH_ROOT}/ext_7z/result.json"
+        cat "${PATH_ROOT}/ext_7z/result.json" | jq '.[].browser_download_url' | while read -r url; do
+            url=$(echo $url | sed 's/^"\(.*\)"$/\1/')
+            file="${PATH_ROOT}/ext_7z/$(basename ${url})"
+            sha256_remote=$(cat "${PATH_ROOT}/ext_7z/result.json" | jq ".[] | select(.browser_download_url == \"${url}\") | .digest" | awk -F ":" '{print $2}' | awk -F '"' '{print $1}')
+            for i in {1..10}; do
+                sha256=""
+                if [[ -e "${file}" ]]; then
+                    sha256=$(sha256sum ${file} | awk '{print $1}')
+                fi
+                if [[ "${sha256}" == "${sha256_remote}" ]]; then
+                    break
+                else
+                    echo "download $url -> ${file}"
+                    wget -c -O "${file}" --no-check-certificate "${url}"
+                    sleep 1
+                fi
+            done
+        done
+        if [[ -e "${PATH_ROOT}/ext_7z/cix_ext.7z.001" ]]; then
+            cd "${PATH_ROOT}/ext_7z/"
+            if [[ ! -e "${PATH_ROOT}/ext_7z/ext" ]]; then
+                7z x cix_ext.7z.001
+            fi
+            if [[ -e "${PATH_ROOT}/ext_7z/ext" ]] && [[ ! -e "${PATH_ROOT}/ext" ]]; then
+                mv "${PATH_ROOT}/ext_7z/ext" "${PATH_ROOT}/ext"
+            fi
+            cd -
+        fi
+        if [[ ! -e "${PATH_ROOT}/ext" ]]; then
+            echo -e "${RED}Error: resources (ext) are absent. please retry this step.${NORMAL}"
+            exit 1
+        fi
+    else
+        local _nexus="$NEXUS_SITE"
+        if [[ "${_nexus}" != "" ]]; then
+            if [[ "${_nexus}" != "sh" ]]; then
+                _nexus="${_nexus}-"
+            else
+                _nexus="zj-"
+            fi
+        fi
+        download_binary_files "https://${_nexus}artifacts.cixtech.com" "${EX_CUSTOMER}" "${EX_PROJECT}" "${EX_VERSION}" "${PATH_ROOT}/ext" ${EX_NEXUS_USER} ${EX_NEXUS_PASS}
     fi
-    download_binary_files "https://${_nexus}artifacts.cixtech.com" "${EX_CUSTOMER}" "${EX_PROJECT}" "${EX_VERSION}" "${PATH_ROOT}/ext" ${EX_NEXUS_USER} ${EX_NEXUS_PASS}
 }
 
 #show help
 function help() {
-cat <<EOF
+    cat <<EOF
 
 Run "help" for help with the build system itself.
 
@@ -300,6 +355,7 @@ function newer_env() {
     sudo groupadd messagebus
     sudo apt-get -y update
     sudo apt-get -y install lsb-release \
+        apt-utils \
         autoconf \
         autopoint \
         bc \
@@ -391,6 +447,7 @@ function newer_env() {
         alsa-utils \
         dracut
 
+    PIP_ASSIST=""
     case "${ver}" in
         "24")
             sudo apt-get -y install \
@@ -402,6 +459,12 @@ function newer_env() {
             sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100
             sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
             sudo update-alternatives --install /usr/bin/gcc-ar gcc-ar /usr/bin/gcc-ar-11 100
+            PIP_ASSIST="--break-system-packages"
+            sudo apt-get -y install qemu-system qemu-utils
+            sudo tee /etc/binfmt.d/qemu-aarch64.conf <<EOF
+:qemu-aarch64:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-aarch64-static:OC
+EOF
+            sudo systemctl restart systemd-binfmt
             ;;
         *)
             sudo apt-get -y install \
@@ -448,7 +511,7 @@ function newer_env() {
     fi
     python3 get-pip.py
     echo "y" | pip3 uninstall pyOpenSSL
-    pip3 install --upgrade --force-reinstall 'requests==2.31.0' 'urllib3==1.26.0' 'meson==1.3.0' 'ply==3.11' 'cryptography==44.0.2' 'cmake==3.24.2' 'docutils==0.18.1' openpyxl nexus3-cli launchpadlib pyOpenSSL mako
+    pip3 install --upgrade --force-reinstall 'requests==2.31.0' urllib3 'meson==1.4.0' 'ply==3.11' 'cryptography==44.0.2' 'cmake==3.24.2' 'docutils==0.18.1' openpyxl nexus3-cli launchpadlib pyOpenSSL mako pylint pyyaml
 
     # if [[ "${NEXUS_SITE}" != "customer" ]]; then
     #     if [[ ! -e "${HOME}/bin" ]]; then
@@ -579,9 +642,9 @@ function config() {
     local _kms_project_id=$KMS_PROJECT_ID
     local _auto_guid=$AUTO_GUID
     local _dt=$DT
-    local _customer_hw_info=$CUSTOMER_HW_INFO
+    local _userdata_resize=$USERDATA_RESIZE
     OPTIND=0
-    while getopts "g:d:p:f:k:m:e:h:b:t:T:r:s:a:ni:x:o:l:w:R:W:K:q:PNS:U:V:G:D:C:E:" opt; do
+    while getopts "g:d:p:f:k:m:e:h:b:t:T:r:s:a:ni:x:o:l:w:R:W:K:q:PNS:U:V:G:D:C:E:H:I:u:Q:O:" opt; do
         case $opt in
         ("P")
             export http_proxy="http://shproxy.cixtech.com:3128"
@@ -678,7 +741,30 @@ function config() {
         ("V") _kms_version="$OPTARG" ;;
         ("G") _auto_guid="$OPTARG" ;;
         ("D") _dt="$OPTARG" ;;
-        ("C") _customer_hw_info="$OPTARG" ;;
+        ("H")
+            if [[ ${#OPTARG} -gt 2 ]]; then
+                export SIGN_KEY=$(realpath --no-symlinks "$(echo "$OPTARG" | sed "s:\"::g")")
+            else
+                export SIGN_KEY=""
+            fi
+            ;;
+        ("I")
+            if [[ ${#OPTARG} -gt 2 ]]; then
+                export SIGN_CERT=$(realpath --no-symlinks "$(echo "$OPTARG" | sed "s:\"::g")")
+            else
+                export SIGN_CERT=""
+            fi
+            ;;
+        ("u") _userdata_resize="$OPTARG" ;;
+        ("Q")
+            export ENABLE_SQUASH_FS="$OPTARG"
+            ;;
+        ("O")
+            export ENABLE_OVERLAY_FS="$OPTARG"
+            if [[ "${_data_size}" == "0" ]]; then
+                _data_size="1"
+            fi
+            ;;
         esac
     done
     if [[ $_root_free_size =~ ^[0-9]+$ ]]; then
@@ -806,10 +892,10 @@ function config() {
     if [[ "$DT" != "$_dt" ]]; then
         export DT=$_dt
     fi
-    if [[ "$CUSTOMER_HW_INFO" != "$_customer_hw_info" ]]; then
-        export CUSTOMER_HW_INFO=$_customer_hw_info
+    if [[ "$USERDATA_RESIZE" != "$_userdata_resize" ]]; then
+        export USERDATA_RESIZE=$_userdata_resize
     fi
-    echo "-g ${PARALLEL_GROUP} -d ${BUILD_MODE} -p ${PLATFORM} -q ${BUILDMUTTER} -f ${FILESYSTEM} -k ${KEY_TYPE} -m ${KMS} -h ${SOC_TYPE} -b ${BOARD} -t ${TEE_TYPE} -T ${SECURE_STORAGE} -r ${DDR_MODEL} -s ${SMP} -a ${ACPI} -i ${ISO_INSTALLER} -x ${NEXUS_SITE} -o ${DEBIAN_MODE} -l ${FASTBOOT_LOAD} -S ${SYSTEMD_TARGET} -e ${DRM} -w ${NETWORK} -R ${ROOT_FREE_SIZE} -W ${SWAP_SIZE} -E ${DATA_SIZE} -K ${DOCKER_MODE}" -U ${KMS_PROJECT_ID} -V ${KMS_VERSION} -G ${AUTO_GUID} -D ${DT} -C ${CUSTOMER_HW_INFO} > "${PATH_ROOT}/build-scripts/.env.cix"
+    echo "-g ${PARALLEL_GROUP} -d ${BUILD_MODE} -p ${PLATFORM} -q ${BUILDMUTTER} -f ${FILESYSTEM} -k ${KEY_TYPE} -m ${KMS} -h ${SOC_TYPE} -b ${BOARD} -t ${TEE_TYPE} -T ${SECURE_STORAGE} -r ${DDR_MODEL} -s ${SMP} -a ${ACPI} -i ${ISO_INSTALLER} -x ${NEXUS_SITE} -o ${DEBIAN_MODE} -l ${FASTBOOT_LOAD} -S ${SYSTEMD_TARGET} -e ${DRM} -w ${NETWORK} -R ${ROOT_FREE_SIZE} -W ${SWAP_SIZE} -E ${DATA_SIZE} -K ${DOCKER_MODE} -u ${USERDATA_RESIZE} -U ${KMS_PROJECT_ID} -V ${KMS_VERSION} -G ${AUTO_GUID} -D ${DT} -H \"${SIGN_KEY}\" -I \"${SIGN_CERT}\" -Q ${ENABLE_SQUASH_FS} -O ${ENABLE_OVERLAY_FS}" > "${PATH_ROOT}/build-scripts/.env.cix"
     _showParams
 }
 
@@ -972,7 +1058,7 @@ function build() {
             #     _input="-i ${PARALLEL_GROUP}"
             # fi
             if [[ -e "${PATH_ROOT}/build-scripts/build-$1.sh" ]]; then
-                $CMD "${PATH_ROOT}/build-scripts/build-$1.sh" ${_input} ${_param} -d $BUILD_MODE -p $PLATFORM -f $FILESYSTEM -h $SOC_TYPE -b $BOARD -k $KEY_TYPE -m $KMS -t $TEE_TYPE -T $SECURE_STORAGE -r $DDR_MODEL -s $SMP -a $ACPI -x $NEXUS_SITE -o $DEBIAN_MODE -l $FASTBOOT_LOAD -e $DRM -w $NETWORK -K $DOCKER_MODE -U $KMS_PROJECT_ID -V ${KMS_VERSION} -G ${AUTO_GUID} build
+                $CMD "${PATH_ROOT}/build-scripts/build-$1.sh" ${_input} ${_param} -d $BUILD_MODE -p $PLATFORM -f $FILESYSTEM -h $SOC_TYPE -b $BOARD -k $KEY_TYPE -m $KMS -t $TEE_TYPE -T $SECURE_STORAGE -r $DDR_MODEL -s $SMP -a $ACPI -x $NEXUS_SITE -o $DEBIAN_MODE -l $FASTBOOT_LOAD -e $DRM -w $NETWORK -K $DOCKER_MODE -u $USERDATA_RESIZE -U $KMS_PROJECT_ID -V ${KMS_VERSION} -G ${AUTO_GUID} build
                 ret=$?
                 if [[ $ret -ne 0 ]]; then
                     return $ret
@@ -1030,7 +1116,7 @@ function buildonly() {
             #     _input="-i ${PARALLEL_GROUP}"
             # fi
             if [[ -e "${PATH_ROOT}/build-scripts/build-$1.sh" ]]; then
-                $CMD "${PATH_ROOT}/build-scripts/build-$1.sh" -M ${_input} ${_param} -d $BUILD_MODE -p $PLATFORM -f $FILESYSTEM -h $SOC_TYPE -b $BOARD -k $KEY_TYPE -m $KMS -t $TEE_TYPE -T $SECURE_STORAGE -r $DDR_MODEL -s $SMP -a $ACPI -x $NEXUS_SITE -o $DEBIAN_MODE -l $FASTBOOT_LOAD -e $DRM -w $NETWORK -K $DOCKER_MODE -U $KMS_PROJECT_ID -V ${KMS_VERSION} -G ${AUTO_GUID} build
+                $CMD "${PATH_ROOT}/build-scripts/build-$1.sh" -M ${_input} ${_param} -d $BUILD_MODE -p $PLATFORM -f $FILESYSTEM -h $SOC_TYPE -b $BOARD -k $KEY_TYPE -m $KMS -t $TEE_TYPE -T $SECURE_STORAGE -r $DDR_MODEL -s $SMP -a $ACPI -x $NEXUS_SITE -o $DEBIAN_MODE -l $FASTBOOT_LOAD -e $DRM -w $NETWORK -K $DOCKER_MODE -u $USERDATA_RESIZE -U $KMS_PROJECT_ID -V ${KMS_VERSION} -G ${AUTO_GUID} build
                 ret=$?
                 if [[ $ret -ne 0 ]]; then
                     return $ret
@@ -1088,7 +1174,7 @@ function clean() {
             #     _input="-i ${PARALLEL_GROUP}"
             # fi
             if [[ -e "${PATH_ROOT}/build-scripts/build-$1.sh" ]]; then
-                $CMD "${PATH_ROOT}/build-scripts/build-$1.sh" ${_input} ${_param} -d $BUILD_MODE -p $PLATFORM -f $FILESYSTEM -h $SOC_TYPE -b $BOARD -k $KEY_TYPE -m $KMS -t $TEE_TYPE -T $SECURE_STORAGE -r $DDR_MODEL -s $SMP -a $ACPI -x $NEXUS_SITE -o $DEBIAN_MODE -l $FASTBOOT_LOAD -e $DRM -w $NETWORK -K $DOCKER_MODE -U $KMS_PROJECT_ID -V ${KMS_VERSION} -G ${AUTO_GUID} clean
+                $CMD "${PATH_ROOT}/build-scripts/build-$1.sh" ${_input} ${_param} -d $BUILD_MODE -p $PLATFORM -f $FILESYSTEM -h $SOC_TYPE -b $BOARD -k $KEY_TYPE -m $KMS -t $TEE_TYPE -T $SECURE_STORAGE -r $DDR_MODEL -s $SMP -a $ACPI -x $NEXUS_SITE -o $DEBIAN_MODE -l $FASTBOOT_LOAD -e $DRM -w $NETWORK -K $DOCKER_MODE -u $USERDATA_RESIZE -U $KMS_PROJECT_ID -V ${KMS_VERSION} -G ${AUTO_GUID} clean
                 ret=$?
                 if [[ $ret -ne 0 ]]; then
                     return $ret
@@ -1201,7 +1287,7 @@ function execute() {
             #     _input="-i ${PARALLEL_GROUP}"
             # fi
             if [[ -e "${PATH_ROOT}/build-scripts/build-$2.sh" ]]; then
-                $CMD "${PATH_ROOT}/build-scripts/build-$2.sh" -M ${_input} ${_param} -d $BUILD_MODE -p $PLATFORM -f $FILESYSTEM -h $SOC_TYPE -b $BOARD -k $KEY_TYPE -m $KMS -t $TEE_TYPE -T $SECURE_STORAGE -r $DDR_MODEL -s $SMP -a $ACPI -x $NEXUS_SITE -o $DEBIAN_MODE -l $FASTBOOT_LOAD -e $DRM -w $NETWORK -K $DOCKER_MODE -U $KMS_PROJECT_ID -V ${KMS_VERSION} -G ${AUTO_GUID} $1
+                $CMD "${PATH_ROOT}/build-scripts/build-$2.sh" -M ${_input} ${_param} -d $BUILD_MODE -p $PLATFORM -f $FILESYSTEM -h $SOC_TYPE -b $BOARD -k $KEY_TYPE -m $KMS -t $TEE_TYPE -T $SECURE_STORAGE -r $DDR_MODEL -s $SMP -a $ACPI -x $NEXUS_SITE -o $DEBIAN_MODE -l $FASTBOOT_LOAD -e $DRM -w $NETWORK -K $DOCKER_MODE -u $USERDATA_RESIZE -U $KMS_PROJECT_ID -V ${KMS_VERSION} -G ${AUTO_GUID} $1
                 ret=$?
                 if [[ $ret -ne 0 ]]; then
                     return $ret
@@ -1322,7 +1408,13 @@ export EX_VERSION=$EX_VERSION
 export EX_NEXUS_USER=$EX_NEXUS_USER
 export EX_NEXUS_PASS=$EX_NEXUS_PASS
 export DOCKER_MODE=$DOCKER_MODE
+export USERDATA_RESIZE=$USERDATA_RESIZE
 export KMS_PROJECT_ID=$KMS_PROJECT_ID
 export KMS_VERSION=${KMS_VERSION}
 export AUTO_GUID=${AUTO_GUID}
-export CUSTOMER_HW_INFO=${CUSTOMER_HW_INFO}
+
+export SIGN_KEY=${SIGN_KEY:-}
+export SIGN_CERT=${SIGN_CERT:-}
+
+export ENABLE_SQUASH_FS=${ENABLE_SQUASH_FS}
+export ENABLE_OVERLAY_FS=${ENABLE_OVERLAY_FS}

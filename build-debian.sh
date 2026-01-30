@@ -122,6 +122,10 @@ fi
 if [[ -e \$(ls \${WORKSPACE}/cix-vpu-test*.deb 2>/dev/null) ]]; then
     dpkg -i \${WORKSPACE}/cix-vpu-test*.deb
 fi
+
+if [[ -e \$(ls \${WORKSPACE}/cix-env*.deb 2>/dev/null) ]]; then
+    dpkg -i --force-overwrite \${WORKSPACE}/cix-env*.deb
+fi
 # do not produce initrd in chroot environment
 mv /etc/kernel/postinst.d/initramfs-tools /etc/kernel/initramfs-tools.bak
 if [ -n \"\$(ls \${WORKSPACE}/linux-*.deb)\" ]; then
@@ -186,6 +190,10 @@ if [[ -e \$(ls \${WORKSPACE}/cix-audio-dsp*.deb 2>/dev/null) ]]; then
 fi
 if [[ -e \$(ls \${WORKSPACE}/cix-libglvnd*.deb 2>/dev/null) ]]; then
     dpkg -i \${WORKSPACE}/cix-libglvnd*.deb
+fi
+
+if [[ -e \$(ls \${WORKSPACE}/cix-env*.deb 2>/dev/null) ]]; then
+    dpkg -i --force-overwrite \${WORKSPACE}/cix-env*.deb
 fi
 
 # do not trigger to produce initrd in chroot environment
@@ -278,6 +286,14 @@ function mergeRootfs() {
     line=`sudo sed -n "/export PATH=/=" "${PATH_DEBIAN}/root/.bashrc"`
     if [[ "$line" == "" ]]; then
         sudo sh -c "echo 'export PATH=/usr/share/cix/bin:\$PATH' >> ${PATH_DEBIAN}/root/.bashrc"
+    fi
+    line=`sudo sed -n "/export LD_LIBRARY_PATH=/=" "${PATH_DEBIAN}/root/.bashrc"`
+    if [[ "$line" == "" ]]; then
+        sudo sh -c "echo 'export LD_LIBRARY_PATH=/usr/share/cix/lib' >> ${PATH_DEBIAN}/root/.bashrc"
+    fi
+    line=`sudo sed -n "/export GST_PLUGIN_PATH_1_0=/=" "${PATH_DEBIAN}/root/.bashrc"`
+    if [[ "$line" == "" ]]; then
+        sudo sh -c "echo 'export GST_PLUGIN_PATH_1_0=/usr/share/cix/lib/gstreamer-1.0' >> ${PATH_DEBIAN}/root/.bashrc"
     fi
 
     prepare_debs $timestamp
@@ -796,6 +812,17 @@ do_build() {
         replace_or_add_line "\"debian-config\"" "\"debian-config\",\"${DEBIAN_MODE}\",$(date +%s)" "${PATH_OUT}/.compile.csv"
         return
     fi
+    if [[ -e "${PATH_ROOT}/build-scripts/debian/ar" ]]; then
+        sudo cp -rf "${PATH_ROOT}/build-scripts/debian/ar" "${PATH_DEBIAN}/usr/local/bin/"
+    fi
+    if [[ "${ENABLE_OVERLAY_FS}" == "true" ]]; then
+        if [[ -e "${PATH_ROOT}/build-scripts/debian/initramfs-overlay-local" ]] && [[ -e "${PATH_DEBIAN}/usr/share/initramfs-tools/scripts/local" ]]; then
+            sudo cp -f "${PATH_ROOT}/build-scripts/debian/initramfs-overlay-local" "${PATH_DEBIAN}/usr/share/initramfs-tools/scripts/local"
+        fi
+    fi
+    if [[ "${ENABLE_SQUASH_FS}" == "true" ]] && [[ -e "${PATH_DEBIAN}/etc/initramfs-tools/scripts/init-top/growroot.sh" ]]; then
+        sudo sed -i -e "s/--expand-root\ auto\ --expand-data/--expand-data/g" "${PATH_DEBIAN}/etc/initramfs-tools/scripts/init-top/growroot.sh"
+    fi
 
     mergeRootfs $timestamp
 
@@ -840,7 +867,6 @@ systemctl mask systemd-networkd-wait-online.service
 systemctl set-default ${SYSTEMD_TARGET:-graphical}.target
 update-initramfs -c -k ${linux_version} -b /boot
     "
-
         if [[ -e "${PATH_ROOT}/tmp" ]]; then
             sudo rm -rf "${PATH_ROOT}/tmp"
         fi

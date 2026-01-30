@@ -24,6 +24,27 @@ set -u
 
 module_name=$(basename "$0")
 
+function sign_file() {
+    local key=${SIGN_KEY:-}
+    local cert=${SIGN_CERT:-}
+    local src=$1
+    local dst=$2
+
+    if [[ ${#key} -gt 0 ]] && [[ ${#cert} -gt 0 ]]; then
+        if [[ "${src}" == "${dst}" ]]; then
+            sudo sbsign --key ${key} --cert ${cert} --output "${dst}.signed" "${src}"
+            sudo mv "${dst}.signed" "${dst}"
+        else
+            sudo sbsign --key ${key} --cert ${cert} --output "${dst}" "${src}"
+        fi
+    else
+        if [[ "${src}" != "${dst}" ]]; then
+            sudo cp -f "${src}" "${dst}"
+        fi
+    fi
+    sudo chown ${USER}:${USER} "${dst}"
+}
+
 function replace_line_offset_lines() {
     local src=$1
     local dst=$2
@@ -309,7 +330,7 @@ function handle_dependent_modules() {
                     break
                 fi
             done
-            "${PATH_ROOT}/build-scripts/$arg" -D -n -d $BUILD_MODE -p "$PLATFORM" -f "$FILESYSTEM" -h "$SOC_TYPE" -b "$BOARD" -k "$KEY_TYPE" -m "$KMS" -t "$TEE_TYPE" -r "$DDR_MODEL" -s "$SMP" -a "$ACPI" -x "$NEXUS_SITE" -o "$DEBIAN_MODE" -l "$FASTBOOT_LOAD" -e "$DRM" -w "$NETWORK" -K "$DOCKER_MODE" $cmd || exit 1
+            "${PATH_ROOT}/build-scripts/$arg" -D -n -d $BUILD_MODE -p "$PLATFORM" -f "$FILESYSTEM" -h "$SOC_TYPE" -b "$BOARD" -k "$KEY_TYPE" -m "$KMS" -t "$TEE_TYPE" -r "$DDR_MODEL" -s "$SMP" -a "$ACPI" -x "$NEXUS_SITE" -o "$DEBIAN_MODE" -l "$FASTBOOT_LOAD" -e "$DRM" -w "$NETWORK" -K "$DOCKER_MODE" -u "$USERDATA_RESIZE" $cmd || exit 1
         done
     done
 }
@@ -495,7 +516,7 @@ Description: $pkg_Name package"
 Version: ${pkg_Ver}
 Architecture: arm64
 Maintainer: Cix OS team
-Depends: libc6 (>= 2.34), libglib2.0-0, libglib2.0-bin, libx11-6, libgdk-pixbuf-2.0-0, zlib1g, libasound2, libogg0, libopus0, libxext6, libxi6, libxfixes3, libxdamage1, libxml2, libnettle8, libcairo2, libjpeg62-turbo, libpng16-16, libsoup-3.0-0, libva-drm2, libva-glx2, libva-wayland2, libva-x11-2, libva2, libdrm2, libdrm-radeon1, libdrm-nouveau2, libdrm-amdgpu1, libdrm-freedreno1, libdrm-tegra0, libdrm-etnaviv1, libvulkan1, libxcb1, libxkbcommon0, libwayland-client0, libwayland-server0, libwayland-cursor0, libwayland-egl1, libwayland-bin, libnice10, libwebp7, libwebpmux3, libwebpdemux2, libjson-glib-1.0-0, libpango-1.0-0, libpangocairo-1.0-0, libpangoft2-1.0-0, libpangoxft-1.0-0
+Depends: gstreamer1.0-plugins-good, gstreamer1.0-plugins-bad
 Section: utils
 Priority: optional
 Description: $pkg_Name package"
@@ -727,6 +748,9 @@ function cix_download() { #-s <src> -f <saved path> -d <expend path> -b <backup 
             fi
             if [[ "${backup: -4}" == ".tgz" ]]; then
                 ${prefix} tar -xzf "${PATH_ROOT}/ext/mirror/${backup}" --numeric-owner -C "${dest}"
+                if [[ -e "/usr/bin/qemu-aarch64-static" ]] && [[ -e "${dest}/usr/bin" ]] && [[ ! -e "${dest}/usr/bin/qemu-aarch64-static" ]]; then
+                    sudo cp -f "/usr/bin/qemu-aarch64-static" "${dest}/usr/bin/qemu-aarch64-static"
+                fi
             elif [[ "${backup: -4}" == ".tar" ]]; then
                 ${prefix} tar -xf "${PATH_ROOT}/ext/mirror/${backup}" --numeric-owner -C "${dest}"
             elif [[ "${backup: -4}" == ".deb" ]]; then
@@ -790,6 +814,9 @@ EOF
         fi
         if [[ "${file: -4}" == ".tgz" ]]; then
             ${prefix} tar -xzf "${file}" --numeric-owner -C "${dest}"
+            if [[ -e "/usr/bin/qemu-aarch64-static" ]] && [[ -e "${dest}/usr/bin" ]] && [[ ! -e "${dest}/usr/bin/qemu-aarch64-static" ]]; then
+                sudo cp -f "/usr/bin/qemu-aarch64-static" "${dest}/usr/bin/qemu-aarch64-static"
+            fi
         elif [[ "${file: -4}" == ".tar" ]]; then
             ${prefix} tar -xf "${file}" --numeric-owner -C "${dest}"
         elif [[ "${file: -4}" == ".deb" ]]; then
@@ -826,14 +853,19 @@ export ACPI=$ACPI
 export DEBIAN_MODE=$DEBIAN_MODE
 export NETWORK=$NETWORK
 export DOCKER_MODE=$DOCKER_MODE
+export USERDATA_RESIZE=$USERDATA_RESIZE
 export KMS_PROJECT_ID=${KMS_PROJECT_ID:-sky1_a0_product_01}
 export KMS_VERSION=${KMS_VERSION:-1.0.2}
 export AUTO_GUID=${AUTO_GUID:-1}
 export DT=${DT:-evb}
 export CUSTOMER_HW_INFO=${CUSTOMER_HW_INFO:-evb_p0}
 export SECURE_STORAGE=${SECURE_STORAGE:-none}
+export SIGN_KEY=${SIGN_KEY:-}
+export SIGN_CERT=${SIGN_CERT:-}
+export ENABLE_SQUASH_FS=${ENABLE_SQUASH_FS:-false}
+export ENABLE_OVERLAY_FS=${ENABLE_OVERLAY_FS:-false}
 CIX_ANDROID_BOOT=${CIX_ANDROID_BOOT:-}
-if [[ "$CIX_ANDROID_BOOT" == "nvme" || "$CIX_ANDROID_BOOT" == "ddr" || "$CIX_ANDROID_BOOT" == "usb" ]]; then
+if [[ "$CIX_ANDROID_BOOT" == "nvme" || "$CIX_ANDROID_BOOT" == "ddr" ]]; then
   export FASTBOOT_LOAD=$CIX_ANDROID_BOOT
 else
   export FASTBOOT_LOAD=$FASTBOOT_LOAD
@@ -927,7 +959,7 @@ export PATH_LINUX="${PATH_ROOT}/${PLAT_PREFIX}linux"
     ;;
 ("android")
 readonly PLATFORM_OUT_DIR=$WORKSPACE_DIR
-export PATH_OUT="${PLATFORM_OUT_DIR}/out/target/product/sky1_$BOARD/"
+export PATH_OUT="${PLATFORM_OUT_DIR}/out/target/product/$TARGET_PRODUCT/"
     ;;
 ("none")
 readonly PLATFORM_OUT_DIR="${WORKSPACE_DIR}/output/${PLATFORM}_${BOARD}"
@@ -947,8 +979,8 @@ if [[ ! -e "${PATH_OUT}/images" ]]; then
     mkdir -p "${PATH_OUT}/images"
 fi
 
-SYSROOT_VERSION="20250401-1"
-REMOTE_SYSROOT_MD5="bc8b51504aa276beb8da1bf80bdec050"
+SYSROOT_VERSION="20251029-1"
+REMOTE_SYSROOT_MD5="97af9ea2907e1ce3c8ba9c48eb8545cd"
 SYSROOT_MD5=""
 case "$FILESYSTEM" in
 ("debian")
@@ -1098,7 +1130,7 @@ if [ $CIX_ANDROID_BUILD_MODE ]; then
     export BUILD_MODE=$CIX_ANDROID_BUILD_MODE
 fi
 
-echo "${PATH_ROOT}/build-scripts/$module_name -d $BUILD_MODE -p $PLATFORM -f $FILESYSTEM -h $SOC_TYPE -b $BOARD -k $KEY_TYPE -m $KMS -t $TEE_TYPE -r $DDR_MODEL -s $SMP -a $ACPI -x $NEXUS_SITE -o $DEBIAN_MODE -l $FASTBOOT_LOAD -e $DRM -w $NETWORK -K $DOCKER_MODE -U $KMS_PROJECT_ID -V $KMS_VERSION ${CMD[@]}"
+echo "${PATH_ROOT}/build-scripts/$module_name -d $BUILD_MODE -p $PLATFORM -f $FILESYSTEM -h $SOC_TYPE -b $BOARD -k $KEY_TYPE -m $KMS -t $TEE_TYPE -r $DDR_MODEL -s $SMP -a $ACPI -x $NEXUS_SITE -o $DEBIAN_MODE -l $FASTBOOT_LOAD -e $DRM -w $NETWORK -K $DOCKER_MODE -U $KMS_PROJECT_ID -V $KMS_VERSION -u $USERDATA_RESIZE ${CMD[@]}"
 
 echo "******************ENV VALUE***********************"
 echo "CIX_VERSION:                   "$CIX_VERSION
@@ -1136,6 +1168,7 @@ echo "DEBIAN_MODE:                   "$DEBIAN_MODE "(0: without debian, 1: gnome
 echo "FASTBOOT_LOAD:                 "$FASTBOOT_LOAD
 echo "NETWORK:                       "$NETWORK
 echo "DOCKER_MODE:                   "$DOCKER_MODE
+echo "USERDATA_RESIZE:               "$USERDATA_RESIZE
 echo "INPUT:                         "${INPUT:-}
 echo "CUSTOMER_HW_INFO               "${CUSTOMER_HW_INFO}
 echo "**************************************************"

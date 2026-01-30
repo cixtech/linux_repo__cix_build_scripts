@@ -1,3 +1,9 @@
+cix-npu-driver (2.0.2) bookworm; urgency=medium
+
+  * Update to fix ACPI pwr issue
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Mon, 26 Jan 2026 14:02:02 +0800
+
 cix-npu-driver (2.0.1) bookworm; urgency=medium
 
   * Add dkms support

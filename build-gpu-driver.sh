@@ -40,6 +40,11 @@ do_build() {
     cp ${gpu_driver_dir}/base/arm/memory_group_manager/memory_group_manager.ko ${install_dir}
     cp ${gpu_driver_dir}/base/arm/protected_memory_allocator/protected_memory_allocator.ko ${install_dir}
     cp ${gpu_driver_dir}/gpu/arm/midgard/mali_kbase.ko ${install_dir}
+
+    debian_dir=${build_deb_dir}/DEBIAN
+    mkdir -p "$build_deb_dir/DEBIAN"
+    echo "#!/bin/bash" > ${debian_dir}/postinst
+    echo "depmod ${linux_version} -a" >> ${debian_dir}/postinst
     create_cix_deb "${pkg_Name}"
     # finish build deb package
     record_compile "${gpu_driver_dir}"

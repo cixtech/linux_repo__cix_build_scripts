@@ -46,8 +46,8 @@ do_build() {
 #!/bin/sh
 set -e
 
-pip3 install /usr/share/cix/pypi/libnoe-2.0.0-py3-none-manylinux2014_aarch64.whl --break-system-packages
-pip3 install /usr/share/cix/pypi/NOE_Engine-2.0.0-py3-none-manylinux2014_aarch64.whl --break-system-packages
+pip3 install /usr/share/cix/pypi/libnoe-*-py3-none-manylinux2014_aarch64.whl --break-system-packages
+pip3 install /usr/share/cix/pypi/noe_engine-*-py3-none-manylinux2014_aarch64.whl --break-system-packages
 
 exit 0
 EOF
@@ -63,33 +63,19 @@ EOF
         if [ ! -e $build_deb_dir/etc/systemd/system ]; then
             mkdir -p $build_deb_dir/etc/systemd/system
         fi
-        cat > $build_deb_dir/etc/systemd/system/load-isp-modules.service <<- EOF
-[Unit]
-Description=Load isp kernel modules
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/load-isp-modules.sh
-RemainAfterExit=yes
-
-[Install]
-WantedBy=sysinit.target
-EOF
-        if [ ! -e $build_deb_dir/usr/bin ]; then
+        rm -rf  $build_deb_dir/etc/systemd/system/load-isp-modules.service 
+	if [ ! -e $build_deb_dir/usr/bin ]; then
             mkdir -p $build_deb_dir/usr/bin
         fi
-        cat > $build_deb_dir/usr/bin/load-isp-modules.sh <<- EOF
-#!/bin/bash
-insmod /lib/modules/$linux_version/extra/armcb_isp_v4l2.ko
-EOF
-        chmod a+x $build_deb_dir/usr/bin/load-isp-modules.sh
+        
+	rm -rf  $build_deb_dir/usr/bin/load-isp-modules.sh
         if [[ ! -e $build_deb_dir/DEBIAN ]]; then
             mkdir -p $build_deb_dir/DEBIAN
         fi
         cat > $build_deb_dir/etc/systemd/system/isp-daemon.service <<- EOF
 [Unit]
 Description=ISP Daemon
-After=network.target load-isp-modules.service
+After=network.target 
 
 [Service]
 Type=simple
@@ -110,8 +96,6 @@ EOF
 #!/bin/sh
 set -e
 
-# Enable the service to start load isp ko on boot
-systemctl enable load-isp-modules.service || true
 # Enable the service to start isp_app on boot
 systemctl enable isp-daemon.service || true
 
@@ -132,80 +116,19 @@ EOF
     if [ ! -e $build_deb_dir/etc/systemd/system ]; then
         mkdir -p $build_deb_dir/etc/systemd/system
     fi
-    cat > $build_deb_dir/etc/systemd/system/load-gpu-modules.service <<- EOF
-[Unit]
-Description=Load gpu modules
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/load-gpu-modules.sh
-RemainAfterExit=yes
-
-[Install]
-WantedBy=sysinit.target
-EOF
     if [ ! -e $build_deb_dir/usr/bin ]; then
         mkdir -p $build_deb_dir/usr/bin
     fi
-    cat > $build_deb_dir/usr/bin/load-gpu-modules.sh <<- 'EOF'
-#!/bin/bash
-linux_version=$(uname -r)
-
-insmod /lib/modules/$linux_version/extra/protected_memory_allocator.ko
-insmod /lib/modules/$linux_version/extra/memory_group_manager.ko
-insmod /lib/modules/$linux_version/extra/mali_kbase.ko
-
-if [ ! -e /usr/bin/load-common-modules.sh ]; then
-    insmod /lib/modules/$linux_version/kernel/net/wireless/cfg80211.ko
-    insmod /lib/modules/$linux_version/extra/rtl_btusb.ko
-    insmod /lib/modules/$linux_version/extra/rtl_wlan.ko
-    insmod /lib/modules/$linux_version/extra/aipu.ko
-    insmod /lib/modules/$linux_version/extra/amvx.ko
-    insmod /lib/modules/$linux_version/kernel/drivers/hid/uhid.ko
-
-    insmod /lib/modules/$linux_version/kernel/net/netfilter/x_tables.ko
-    insmod /lib/modules/$linux_version/kernel/net/ipv4/netfilter/ip_tables.ko
-    insmod /lib/modules/$linux_version/kernel/net/ipv4/netfilter/iptable_nat.ko
-    insmod /lib/modules/$linux_version/kernel/net/ipv4/netfilter/nf_defrag_ipv4.ko
-    insmod /lib/modules/$linux_version/kernel/net/ipv6/netfilter/nf_defrag_ipv6.ko
-    insmod /lib/modules/$linux_version/kernel/lib/libcrc32c.ko
-    insmod /lib/modules/$linux_version/kernel/net/netfilter/nf_conntrack.ko
-    insmod /lib/modules/$linux_version/kernel/net/netfilter/nf_nat.ko
-    insmod /lib/modules/$linux_version/kernel/net/netfilter/xt_MASQUERADE.ko
-
-    video_devices=($(ls /dev/video* 2>/dev/null | sort -V))
-
-    if [ ${#video_devices[@]} -eq 1 ]; then
-        ln -s "${video_devices[0]}" /dev/video-cixdec0
-    elif [ ${#video_devices[@]} -eq 0 ]; then
-        echo "Not found /dev/video*"
-    else
-        max_device="${video_devices[-2]}"
-        ln -s "$max_device" /dev/video-cixdec0
-    fi
-fi 
-EOF
-
-    chmod a+x $build_deb_dir/usr/bin/load-gpu-modules.sh
     if [[ ! -e $build_deb_dir/DEBIAN ]]; then
         mkdir -p $build_deb_dir/DEBIAN
     fi
-    cat > $build_deb_dir/DEBIAN/postinst <<- EOF
-#!/bin/sh
-set -e
-
-# Enable the service to start on boot
-systemctl enable load-gpu-modules.service || true
-
-exit 0
-EOF
+    
     cat > $build_deb_dir/DEBIAN/triggers <<- EOF
 activate-noawait ldconfig
 EOF
     cat > $build_deb_dir/DEBIAN/shlibs <<- EOF
 libgbm 1 cix-gpu-umd (>= 1.0.0-1)
 EOF
-    chmod a+x $build_deb_dir/DEBIAN/postinst
     if [[ -e $PATH_OUT_DEB_PACKAGES/cix-gpu-test ]]; then
         rm -rf $PATH_OUT_DEB_PACKAGES/cix-gpu-test
     fi
@@ -228,6 +151,8 @@ EOF
 
         mv $build_deb_dir/usr/share/cix $PATH_OUT_DEB_PACKAGES/cix-gpu-test/usr/share
     fi
+    rm -rf $build_deb_dir/usr/bin/load-gpu-modules.sh
+    rm -rf $build_deb_dir/etc/systemd/system/load-gpu-modules.service
     create_cix_deb "cix-gpu-test"
     create_cix_deb "$pkg_Name"
 

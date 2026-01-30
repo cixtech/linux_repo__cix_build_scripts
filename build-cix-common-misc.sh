@@ -29,6 +29,20 @@ do_build() {
     else
         pkg_Name="cix-debian-misc"
         cp -r $PATH_SOURCE_DEB/$pkg_Name ${PATH_OUT_DEB_PACKAGES}
+        cd $PATH_ROOT/build-scripts
+        BRANCH_INFO=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+        COMMIT_ID=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+        OS_VERSION="$BRANCH_INFO-$COMMIT_ID"
+        cd -
+        cd $PATH_ROOT/linux
+        TAG_INFO=$(git describe --tags --abbrev=0 2>/dev/null || echo "unknown")
+        cd -
+        cat > "${PATH_OUT_DEB_PACKAGES}/cix-debian-misc/etc/cix-release" <<- EOF
+VERSION="$OS_VERSION"
+COMMIT_ID="$COMMIT_ID"
+BRANCH_INFO="$BRANCH_INFO"
+TAG_INFO="$TAG_INFO"
+EOF
         if [[ "${DOCKER_MODE}" == "docker" ]]; then
             if [[ ! -e "${PATH_OUT_DEB_PACKAGES}/${pkg_Name}/usr/lib/systemd/system/cix-docker-env.service" ]]; then
                 echo "error, miss cix-docker-env.service!"

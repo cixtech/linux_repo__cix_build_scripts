@@ -361,6 +361,20 @@ echo "menuentry '30 Cix Sky1 SOF ALC5682-ALC1019 AUDIO NVME on EVB (Device Tree)
         root=/dev/nvme0n1p2 rootwait rw
 }
 " >> "${SCRIPT_DIR}/grub-post-silicon.cfg"
+
+echo "menuentry '33 Cix Sky1 CSI-DMA-LT7911 on EVB (Device Tree)' {
+    devicetree /sky1-evb-csidma-lt7911.dtb
+    linux /Image \\
+        console=ttyAMA2,115200 \\
+        efi=noruntime \\
+        earlycon=pl011,0x040d0000 \\
+        arm-smmu-v3.disable_bypass=0 \\
+        acpi=off \\
+        loglevel=4 \\
+        root=/dev/nvme0n1p2 rootwait rw
+}
+" >> "${SCRIPT_DIR}/grub-post-silicon.cfg"
+
 }
 
 BOOT_SIZE=500 # M bytes
@@ -423,6 +437,9 @@ do_boot() {
             is_post_silicon="true"
             cp "${SCRIPT_DIR}/grub-post-silicon.cfg" "${SCRIPT_DIR}/grub.cfg"
             sed -i s/linux_version/${linux_version}/g ${SCRIPT_DIR}/grub.cfg
+            if [[ "${ENABLE_OVERLAY_FS}" == "true" ]] && [[ "$DEBIAN_MODE" != "0" ]]; then
+                sed -i "s/rootwait\ rw/rootwait\ ro/g" ${SCRIPT_DIR}/grub.cfg
+            fi
             if [[ "$ACPI" == "1" ]]; then
                 #default select menuentry '1 Cix Sky1 on EVB (ACPI)'
                 sed -i '3cset default=1' "${SCRIPT_DIR}/grub.cfg"
@@ -460,9 +477,7 @@ do_boot() {
             all_dtb="${all_dtb} ${PATH_OUT}/${dtb} /${dtb}"
         done
 
-        if [[ "${BUILD_MODE}" == "debug" ]]; then
-            sed -i '14s/.*/        debug \\/' "${SCRIPT_DIR}/grub.cfg"
-        fi
+        sign_file "${PATH_OUT}/grub.efi" "${PATH_OUT}/grub.efi"
 
         if [[ "${is_post_silicon}" != "true" ]]; then
             if  [[ "$DEBIAN_MODE" != "0" ]]; then
@@ -576,29 +591,59 @@ do_disk() {
 
     local images=""
     if [[ -e "${path}/boot.img" ]]; then
-        images="${images} --image-file ${path}/boot.img --image-name boot"
+        images="${images} --image-name boot --image-file ${path}/boot.img"
     fi
 
     if [[ -e "${path}/swap.img" ]]; then
-        images="${images} --image-file ${path}/swap.img --image-name swap"
+        images="${images} --image-name swap --image-file ${path}/swap.img"
     fi
 
     local uuid=${CIX_CONST_ROOT_UUID}
     if [[ "${AUTO_GUID}" != "0" ]]; then
         uuid=$(uuidgen)
     fi
-    if [[ -e "${path}/rootfs.ext4" ]]; then
-        images="${images} --image-file ${path}/rootfs.ext4 --image-name root --image-uuid ${uuid}"
+
+    if [[ "${ENABLE_SQUASH_FS}" == "true" ]]; then
+        if [[ -e "${path}/squashfs_raw.img" ]]; then
+            rm -f "${path}/squashfs_raw.img"
+        fi
+        sudo mksquashfs ${PATH_OUT}/debian ${path}/squashfs_raw.img -comp xz
+        sudo chown $USER:$USER ${path}/squashfs_raw.img
+
+        # dd if=/dev/zero of="${path}/squashfs_full.img" bs=1M count=10240
+        # dd if="${path}/squashfs_raw.img" of="${path}/squashfs_full.img" bs=1048576 conv=notrunc
+        # img2simg "${path}/squashfs_full.img" "${path}/squashfs_sparse.img" 1048576
+        # images="${images} --image-name root --image-file ${path}/squashfs_full.img --image-uuid ${uuid}"
+
+        img2simg "${path}/squashfs_raw.img" "${path}/squashfs_sparse.img" 1048576
+        images="${images} --image-name root --image-file ${path}/squashfs_raw.img --part-size 10G --image-uuid ${uuid}"
+    else
+        if [[ -e "${path}/rootfs.ext4" ]]; then
+            images="${images} --image-name root --image-file ${path}/rootfs.ext4 --image-uuid ${uuid}"
+        fi
+    fi
+
+    if [[ -e "${path}/verity_data.img" ]]; then
+        images="${images} --image-file ${path}/verity_data.img --image-name verity_data --image-uuid a4f6d8e2-3b91-4c73-8f59-1e2d3c4b5a67 --image-type-uuid 9b2c1f0a-7e8d-4f6c-9a3b-2c1d0e9f8a56"
+    fi
+
+    if [[ -e "${path}/verity_hash.img" ]]; then
+        images="${images} --image-file ${path}/verity_hash.img --image-name verity_hash --image-uuid 7d4e2c1b-6a9f-4e8c-9d2a-1b2c3d4e5f67 --image-type-uuid 1c3e5f7a-9b8d-4c7e-8f9a-2b3c4d5e6f78"
     fi
 
     if [[ -e "${path}/data.ext4" ]]; then
-        images="${images} --image-file ${path}/data.ext4 --image-name data"
+        images="${images} --image-name data --image-file ${path}/data.ext4"
     fi
 
     sudo ${PATH_ROOT}/build-scripts/debian/cix_tool --release-tool --gpt --create -f ${file} ${images}
     sudo chown $USER:$USER ${file}
     sudo ${PATH_ROOT}/build-scripts/debian/cix_tool --release-tool --gpt -f ${file} --extract-gpt ${path}
     sudo chown $USER:$USER ${path}/partition-table.img
+
+    sudo ${PATH_ROOT}/build-scripts/debian/cix_tool --release-tool --gpt --create-gpt -s 512 -f ${path}/partition-table-512.img ${images}
+    sudo ${PATH_ROOT}/build-scripts/debian/cix_tool --release-tool --gpt --create-gpt -s 4096 -f ${path}/partition-table-4096.img ${images}
+    sudo chown $USER:$USER ${path}/partition-table-512.img
+    sudo chown $USER:$USER ${path}/partition-table-4096.img
 
     if [[ -e "${PATH_OUT}/images/boot.img" ]]; then
         img2simg "${PATH_OUT}/images/boot.img" "${PATH_OUT}/images/boot_sparse.img" 1048576

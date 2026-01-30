@@ -39,7 +39,10 @@ do_build() {
     if [[ -d "${PATH_OUT_PRIVATE_DEB_PACKAGES}/cix-vpu-umd/usr/lib/firmware" ]]; then
         cp -fp ${PATH_OUT_PRIVATE_DEB_PACKAGES}/cix-vpu-umd/usr/lib/firmware/* ${install_dir_firmware}/
     fi
-
+    debian_dir=${build_deb_dir}/DEBIAN
+    mkdir -p "$build_deb_dir/DEBIAN"
+    echo "#!/bin/bash" > ${debian_dir}/postinst
+    echo "depmod ${linux_version} -a" >> ${debian_dir}/postinst
     create_cix_deb "${pkg_Name}"
     # finish build deb package
     cp include/aarch64-none-linux-gnu/*.h "${PATH_SYSROOT}/usr/share/cix/include"

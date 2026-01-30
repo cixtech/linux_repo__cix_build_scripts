@@ -133,6 +133,12 @@ readonly DOCKER_MODE_OPTIONS=(
     "docker"
 )
 
+USERDATA_RESIZE="enable"
+readonly USERDATA_RESIZE_OPTIONS=(
+    "disable"
+    "enable"
+)
+
 DEPENDEE="not dependee"
 
 readonly CMD_DEFAULT=( "build" )
@@ -140,7 +146,7 @@ readonly CMD_OPTIONS=( $(compgen -A function | sed -rne 's#^do_##p') )
 
 print_usage() {
     echo -e "${BOLD}Usage:"
-    echo -e "    $0 ${CYAN} [-f FILESYSTEM] [-p PLATFORM] [-d BUILD_MODE] [-x NEXUS_SITE] [-j PARALLELISM] [-i INPUT] [-k KEY_TYPE] [-m KMS] [-h SOC_TYPE] [-b BOARD] [-t TEE_TYPE] [-r DDR_MODEL] [-s SMP] [-a ACPI] [-o DEBIAN_MODE] [-l FASTBOOT_LOAD] [-e DRM] [-w NETWORK] [-K DOCKER_MODE] [CMD...]$NORMAL"
+    echo -e "    $0 ${CYAN} [-f FILESYSTEM] [-p PLATFORM] [-d BUILD_MODE] [-x NEXUS_SITE] [-j PARALLELISM] [-i INPUT] [-k KEY_TYPE] [-m KMS] [-h SOC_TYPE] [-b BOARD] [-t TEE_TYPE] [-r DDR_MODEL] [-s SMP] [-a ACPI] [-o DEBIAN_MODE] [-l FASTBOOT_LOAD] [-e DRM] [-w NETWORK] [-K DOCKER_MODE] [-U USERDATA_RESIZE] [CMD...]$NORMAL"
     echo
     echo "FILESYSTEM (default is \"$FILESYSTEM_DEFAULT\"):"
     local s
@@ -225,6 +231,10 @@ print_usage() {
     for s in "${DOCKER_MODE_OPTIONS[@]}" ; do
         echo "    $s"
     done
+    echo "USERDATA_RESIZE (default is \"$USERDATA_RESIZE\"):(disable, enable)"
+    for s in "${USERDATA_RESIZE_OPTIONS[@]}" ; do
+        echo "    $s"
+    done
     echo
     echo "PARALLELISM (the parallel thread count)"
     echo
@@ -252,7 +262,7 @@ FILESYSTEM="$FILESYSTEM_DEFAULT"
 CMD=( "${CMD_DEFAULT[@]}" )
 FIRST_MODULE="1"
 MODULE_ONLY="0"
-while getopts "p:f:j:Mnvd:i:k:m:e:h:b:t:T:r:s:a:x:o:l:w:K:DHU:V:G:" opt; do
+while getopts "p:f:j:Mnvd:i:k:m:e:h:b:t:T:r:s:a:x:o:l:w:K:DHU:V:G:u:" opt; do
     case $opt in
     ("v")
         export http_proxy="http://10.128.30.120:8111"
@@ -291,6 +301,7 @@ while getopts "p:f:j:Mnvd:i:k:m:e:h:b:t:T:r:s:a:x:o:l:w:K:DHU:V:G:" opt; do
     ("U") KMS_PROJECT_ID="$OPTARG" ;;
     ("V") KMS_VERSION="$OPTARG" ;;
     ("G") AUTO_GUID="$OPTARG" ;;
+    ("u") USERDATA_RESIZE="$OPTARG" ;;
     ("D") DEPENDEE="dependee" ;;
     ("H")
         print_usage
@@ -356,6 +367,9 @@ in_haystack "$NETWORK" "${NETWORK_OPTIONS[@]}" ||
 
 in_haystack "$DOCKER_MODE" "${DOCKER_MODE_OPTIONS[@]}" ||
     die "invalid DOCKER_MODE: $DOCKER_MODE (none, docker)"
+
+in_haystack "$USERDATA_RESIZE" "${USERDATA_RESIZE_OPTIONS[@]}" ||
+    die "invalid USERDATA_RESIZE: $USERDATA_RESIZE (disable, enable)"
 
 if [[ "$#" -ne 0 ]] ; then
     CMD=( "$@" )
