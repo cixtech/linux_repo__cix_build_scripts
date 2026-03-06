@@ -20,6 +20,8 @@ for_each_build_script() {
         "build-isp-driver-v4l2.sh"
         "build-gpu-driver.sh"
         "build-cix-gpu-dkms.sh"
+        "build-gstreamer.sh"
+        "build-ffmpeg.sh"
         "build-tool.sh"
         "build-prideb.sh"
         "build-cix-env.sh"
@@ -68,7 +70,7 @@ if [[ ! -e "${PATH_ROOT}/ext" ]]; then
     source "${PATH_ROOT}/build-scripts/envtool.sh"
     export EX_CUSTOMER="customer_linux"
     export EX_PROJECT="2025q3"
-    export EX_VERSION="25q4_rc3.3"
+    export EX_VERSION="25q4_rc3.5"
     updateres
 fi
 
