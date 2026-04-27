@@ -1,0 +1,17 @@
+yolox-gradio (2.0.1) bookworm; urgency=medium
+
+  * update yolox-gradio readme,remove the confusing descriptions.
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Mon, 11 Aug 2025 17:05:39 +0800
+
+yolox-gradio (2.0.0) bookworm; urgency=medium
+
+  * noe umd update to 2.0.0
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 01 Jul 2025 19:53:04 +0800
+
+yolox-gradio (1.0.0) bookworm; urgency=medium
+
+  * Init yolox-gradio
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Thu, 15 May 2025 14:21:55 +0900

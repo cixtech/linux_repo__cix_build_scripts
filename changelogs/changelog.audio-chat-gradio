@@ -1,0 +1,35 @@
+audio-chat-gradio (1.0.5) bookworm; urgency=medium
+
+  * update readme, for the key.pem file attribute should be changed to 644.
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 19 Aug 2025 14:53:50 +0800
+
+audio-chat-gradio (1.0.4) bookworm; urgency=medium
+
+  * update readme, for remote connections can use microphone for audio chat.
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Wed, 06 Aug 2025 16:28:16 +0800
+
+audio-chat-gradio (1.0.3) bookworm; urgency=medium
+
+  * update handle of exception over max-token-len.
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Fri, 01 Aug 2025 18:25:02 +0800
+
+audio-chat-gradio (1.0.2) bookworm; urgency=medium
+
+  * update audio chat for multi model_path dir.
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Wed, 30 Jul 2025 12:38:34 +0800
+
+audio-chat-gradio (1.0.1) bookworm; urgency=medium
+
+  * update audio chat for WAV file must be 16000Hz.
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 29 Jul 2025 16:44:47 +0800
+
+audio-chat-gradio (1.0.0) bookworm; urgency=medium
+
+  * Init audio-chat-gradio
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 21 Jan 2025 17:51:43 +0800
