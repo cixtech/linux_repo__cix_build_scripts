@@ -1,0 +1,11 @@
+cix-ai-engine (1.1.0) bookworm; urgency=medium
+
+  * Support noe_engine for cpp 
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 10 Feb 2026 19:30:09 +0800
+
+cix-ai-engine (1.0.0) bookworm; urgency=medium
+
+  * Init cix-ai-engine
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Wed, 05 Nov 2025 19:24:36 +0800

@@ -1,12 +1,12 @@
-cix-libcme (1.1.0) bookworm; urgency=medium
+cix-libcme-dev (1.1.0) bookworm; urgency=medium
 
-  * Init cix-libcme
+  * Init cix-libcme-dev
 
  -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  20 May 2026 17:51:43 +0800
 
-cix-libcme (0.5.0) bookworm; urgency=medium
+cix-libcme-dev (0.5.0-cixdeb12-260417) bookworm; urgency=medium
 
-  * Init cix-libcme
+  * Init cix-libcme-dev
 
  -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  18 Nov 2025 17:51:43 +0800
 

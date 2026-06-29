@@ -1,34 +1,70 @@
-cix-noe-umd (2.0.2) bookworm; urgency=medium
+cix-noe-umd (3.1.2) trixie; urgency=medium
 
-  *revert tsm local and share memory feature in noe umd.
+  * Update get tensor shape api
 
- -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Thu, 07 Aug 2025 15:46:20 +0800
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Wed, 26 Mar 2026 16:38:09 +0800
 
-cix-noe-umd (2.0.1) bookworm; urgency=medium
+cix-noe-umd (3.1.1) trixie; urgency=medium
+
+  * Update noe logging control
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Wed, 25 Mar 2026 16:48:17 +0800
+
+cix-noe-umd (3.1.0) trixie; urgency=medium
+
+  * Support get tensor shape api
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Mon, 09 Feb 2026 22:25:12 +0800
+
+cix-noe-umd (3.0.0) trixie; urgency=medium
+
+  * libnoe upgrade to v3.0 arch
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 04 Nov 2025 20:11:19 +0800
+
+cix-noe-umd (2.0.4) trixie; urgency=medium
+
+  * Update postinst for noe-umd deb
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Mon, 03 Nov 2025 19:43:43 +0800
+
+cix-noe-umd (2.0.3) trixie; urgency=medium
+
+  * Support python3.13
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Wed, 24 Sep 2025 16:45:32 +0800
+
+cix-noe-umd (2.0.2) trixie; urgency=medium
+
+  * Update cross-compile head-file location
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Mon, 15 Sep 2025 13:27:24 +0800
+
+cix-noe-umd (2.0.1) trixie; urgency=medium
 
   * Pack libnoe python binding as whl package
 
  -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 01 Jul 2025 15:27:11 +0800
 
-cix-noe-umd (2.0.0) bookworm; urgency=medium
+cix-noe-umd (2.0.0) trixie; urgency=medium
 
   * Update noe based on r2p0 sdk
 
  -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 03 Jun 2025 10:40:01 +0800
 
-cix-noe-umd (1.1.1) bookworm; urgency=medium
+cix-noe-umd (1.1.1) trixie; urgency=medium
 
   * Build libnoe python lib with symbols hidden
 
  -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Wed, 02 Apr 2025 00:52:26 +0800
 
-cix-noe-umd (1.1.0) bookworm; urgency=medium
+cix-noe-umd (1.1.0) trixie; urgency=medium
 
   * Build libnoe python lib for python3.11 and python3.12
 
  -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Sun, 30 Mar 2025 23:06:58 +0800
 
-cix-noe-umd (1.0.0) bookworm; urgency=medium
+cix-noe-umd (1.0.0) trixie; urgency=medium
 
   * Init cix-noe-umd
 

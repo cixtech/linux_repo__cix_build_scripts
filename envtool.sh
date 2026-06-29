@@ -16,7 +16,7 @@ BUILDMUTTER="N"
 KEY_TYPE="rsa3072_product"
 KMS="rkms" #lkms, rkms
 DRM="disable" #Digital Rights Management: disable, enable
-SOC_TYPE="sky1_a0" #sky1_a0, sky1_b1
+SOC_TYPE="sky1_a0" #sky1_a0
 BOARD="evb" #emu, fpga, evb, crb, cloudbook, batura
 TEE_TYPE="optee" #none, optee, trusty
 DDR_MODEL="ddr-noc_arch_v0"
@@ -50,7 +50,7 @@ NC=${NC-\e[0m}
 
 EX_CUSTOMER="customer_linux"
 EX_PROJECT="2025q3"
-EX_VERSION="25q4_rc3.5"
+EX_VERSION="26q2_rc4"
 EX_NEXUS_USER="svc.public"
 EX_NEXUS_PASS="svc.public"
 USERDATA_RESIZE="enable"
@@ -70,7 +70,7 @@ function _showParams() {
     echo -e "key type(-k):          \e[32m$KEY_TYPE\e[0m (rsa3072_product, sm2_product, rsa3072_prototype, sm2_prototype)"
     echo -e "kms(-m):               \e[32m$KMS\e[0m (lkms, rkms)"
     echo -e "drm(-e):               \e[32m$DRM\e[0m (disable, enable)"
-    echo -e "hardware soc(-h):      \e[32m$SOC_TYPE\e[0m (sky1_a0, sky1_b1)"
+    echo -e "hardware soc(-h):      \e[32m$SOC_TYPE\e[0m (sky1_a0)"
     echo -e "board(-b):             \e[32m$BOARD\e[0m (fpga, emu, evb, crb, cloudbook, batura)"
     echo -e "tee type(-t):          \e[32m$TEE_TYPE\e[0m (none, optee, trusty)"
     echo -e "secure storage(-T):    \e[32m$SECURE_STORAGE\e[0m (none, secure-storage)"
@@ -130,11 +130,24 @@ function download_binary_files() {
     fi
 
     nexus3 login -U ${NEXUS_URL} -u ${USERNAME} -p ${PASSWORD} --no-x509_verify
+    if [[ $? -ne 0 ]]; then
+        echo -e "\e[31mnexus3 login fail.\e[0m"
+        return
+    fi
     # 要下载的文件的URL
     nexus3 list ${CUSTOMER}/${PROJECT}/${TAG} 1>${TEMP_FILE}  2>/dev/null
+    if [[ $? -ne 0 ]]; then
+        echo -e "\e[31mnexus3 list fail.\e[0m"
+        return
+    fi
 
     # 计算总文件数量
     total_files=$(wc -l < "${TEMP_FILE}")
+    if [[ ${total_files} -lt 1 ]]; then
+        echo -e "\e[31mno files found.\e[0m"
+        return
+    fi
+    echo -e "total files: ${total_files}"
 
     # 使用while循环读取文件列表并下载
     while read -r line
@@ -761,7 +774,7 @@ function config() {
             ;;
         ("O")
             export ENABLE_OVERLAY_FS="$OPTARG"
-            if [[ "${_data_size}" == "0" ]]; then
+            if [[ "${ENABLE_OVERLAY_FS}" == "true" ]] && [[ "${_data_size}" == "0" ]]; then
                 _data_size="1"
             fi
             ;;
@@ -1024,7 +1037,7 @@ function build() {
     startTime=$(date +%s%3N)
     echo -n "" > "${PATH_ROOT}/.modules"
     echo -n "" > "${PATH_ROOT}/.modules_stastics"
-    local CMD=""
+    local CMD="$DOCKER"
     local _input=""
     local _param=""
     while [[ $# -gt 0 ]]; do
@@ -1043,6 +1056,9 @@ function build() {
             ;;
         ("-d")
             CMD="$DOCKER"
+            ;;
+        ("--disable-docker")
+            CMD=""
             ;;
         ("--disable-output-root")
             if [[ "$CMD" == "$DOCKER" ]]; then
@@ -1082,7 +1098,7 @@ function buildonly() {
     startTime=$(date +%s%3N)
     echo -n "" > "${PATH_ROOT}/.modules"
     echo -n "" > "${PATH_ROOT}/.modules_stastics"
-    local CMD=""
+    local CMD="$DOCKER"
     local _input=""
     local _param=""
     while [[ $# -gt 0 ]]; do
@@ -1101,6 +1117,9 @@ function buildonly() {
             ;;
         ("-d")
             CMD="$DOCKER"
+            ;;
+        ("--disable-docker")
+            CMD=""
             ;;
         ("--disable-output-root")
             if [[ "$CMD" == "$DOCKER" ]]; then
@@ -1140,7 +1159,7 @@ function clean() {
     startTime=$(date +%s%3N)
     echo -n "" > "${PATH_ROOT}/.modules"
     echo -n "" > "${PATH_ROOT}/.modules_stastics"
-    local CMD=""
+    local CMD="$DOCKER"
     local _input=""
     local _param=""
     while [[ $# -gt 0 ]]; do
@@ -1159,6 +1178,9 @@ function clean() {
             ;;
         ("-d")
             CMD="$DOCKER"
+            ;;
+        ("--disable-docker")
+            CMD=""
             ;;
         ("--disable-output-root")
             if [[ "$CMD" == "$DOCKER" ]]; then
@@ -1198,7 +1220,7 @@ function cleanonly() {
     startTime=$(date +%s%3N)
     echo -n "" > "${PATH_ROOT}/.modules"
     echo -n "" > "${PATH_ROOT}/.modules_stastics"
-    local CMD=""
+    local CMD="$DOCKER"
     local _input=""
     local _param=""
     while [[ $# -gt 0 ]]; do
@@ -1217,6 +1239,9 @@ function cleanonly() {
             ;;
         ("-d")
             CMD="$DOCKER"
+            ;;
+        ("--disable-docker")
+            CMD=""
             ;;
         ("--disable-output-root")
             if [[ "$CMD" == "$DOCKER" ]]; then
@@ -1253,7 +1278,7 @@ function cleanonly() {
 
 #execute a command
 function execute() {
-    local CMD=""
+    local CMD="$DOCKER"
     local _input=""
     local _param=""
     while [[ $# -gt 0 ]]; do
@@ -1272,6 +1297,9 @@ function execute() {
             ;;
         ("-d")
             CMD="$DOCKER"
+            ;;
+        ("--disable-docker")
+            CMD=""
             ;;
         ("--disable-output-root")
             if [[ "$CMD" == "$DOCKER" ]]; then

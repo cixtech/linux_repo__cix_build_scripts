@@ -12,6 +12,10 @@ do_build() {
     cp -r $PATH_SOURCE_DEB/$pkg_Name ${PATH_OUT_DEB_PACKAGES}
     create_cix_deb "${pkg_Name}"
 
+    pkg_Name="cix-alsa-conf"
+    cp -r $PATH_SOURCE_DEB/$pkg_Name ${PATH_OUT_DEB_PACKAGES}
+    create_cix_deb "${pkg_Name}"
+
     if [ $DEBIAN_MODE == 7 ]; then
         pkg_Name="cix-openkylin-adapter"
         cp -r $PATH_SOURCE_DEB/$pkg_Name ${PATH_OUT_DEB_PACKAGES}

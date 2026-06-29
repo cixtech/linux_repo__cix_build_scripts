@@ -1,52 +1,64 @@
-cix-llama-cpp (1.2.4) bookworm; urgency=medium
+cix-llama-cpp (1.2.6) trixie; urgency=medium
+
+  * Upgrade llama-cpp to b6971
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Mon, 10 Nov 2025 10:21:17 +0800
+
+cix-llama-cpp (1.2.5) trixie; urgency=medium
+
+  * Upgrade llama-cpp to b6775
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Thu, 16 Oct 2025 16:11:53 +0800
+
+cix-llama-cpp (1.2.4) trixie; urgency=medium
 
   * Improve vulkan perf
 
  -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 12 Aug 2025 15:33:51 +0800
 
-cix-llama-cpp (1.2.3) bookworm; urgency=medium
+cix-llama-cpp (1.2.3) trixie; urgency=medium
 
   * Add mtmd cli
 
  -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Fri, 08 Aug 2025 19:48:55 +0800
 
-cix-llama-cpp (1.2.2) bookworm; urgency=medium
+cix-llama-cpp (1.2.2) trixie; urgency=medium
 
   * Update, base on 5927 tag
 
  -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Fri, 18 Jul 2025 13:52:02 +0800
 
-cix-llama-cpp (1.2.1) bookworm; urgency=medium
+cix-llama-cpp (1.2.1) trixie; urgency=medium
 
   * remove cmake param:GGML_OPENMP=OFF
 
  -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Thu, 05 Jun 2025 14:09:30 +0800
 
-cix-llama-cpp (1.2.0) bookworm; urgency=medium
+cix-llama-cpp (1.2.0) trixie; urgency=medium
 
   * Update，base on 5287 tag
 
  -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 06 May 2025 17:52:16 +0800
 
-cix-llama-cpp (1.1.1) bookworm; urgency=medium
+cix-llama-cpp (1.1.1) trixie; urgency=medium
 
   * Enable kleidiai for cpu.
 
  -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Sun, 27 Apr 2025 19:46:31 +0800
 
-cix-llama-cpp (1.1.0) bookworm; urgency=medium
+cix-llama-cpp (1.1.0) trixie; urgency=medium
 
   * Improve vulkan perf, based on b4911 tag
 
  -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 22 Apr 2025 15:23:40 +0800
 
-cix-llama-cpp (1.0.1) bookworm; urgency=medium
+cix-llama-cpp (1.0.1) trixie; urgency=medium
 
   * Update, based on 4778 tag
 
  -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Wed, 26 Frb 2025 13:36:14 +0800
 
-cix-llama-cpp (1.0.0) bookworm; urgency=medium
+cix-llama-cpp (1.0.0) trixie; urgency=medium
 
   * Init cix-llama-cpp, based on b4641 tag
 

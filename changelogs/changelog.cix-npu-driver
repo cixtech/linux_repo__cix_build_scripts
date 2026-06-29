@@ -1,8 +1,26 @@
-cix-npu-driver (2.0.2) bookworm; urgency=medium
+cix-npu-driver (3.0.3) bookworm; urgency=medium
+
+  * guard unlink_tcb against NULL prev_tbuf/tail_tcb on job teardown
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Fri, 31 Mar 2026 17:06:21 +0800
+
+cix-npu-driver (3.0.2) bookworm; urgency=medium
+
+  * Update mem allocate
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Fri, 27 Mar 2026 09:57:38 +0800
+
+cix-npu-driver (3.0.1) bookworm; urgency=medium
 
   * Update to fix ACPI pwr issue
 
- -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Mon, 26 Jan 2026 14:02:02 +0800
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Fri, 23 Jan 2026 18:59:45 +0800
+
+cix-npu-driver (3.0.0) bookworm; urgency=medium
+
+  * Update to r2p1 sdk
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 04 Nov 2025 20:28:39 +0800
 
 cix-npu-driver (2.0.1) bookworm; urgency=medium
 

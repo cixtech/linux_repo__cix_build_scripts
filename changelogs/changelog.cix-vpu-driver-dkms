@@ -1,3 +1,9 @@
+cix-vpu-driver-dkms (1.0.1) bookworm; urgency=medium
+
+  * 2026q2 release
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Fri, 22 May 2026 17:51:43 +0800
+
 cix-gpu-dkms (1.0.0) bookworm; urgency=medium
 
   * Init cix-gpu-dkms

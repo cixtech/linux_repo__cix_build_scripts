@@ -1,8 +1,26 @@
+cix-npu-umd (3.0.2) bookworm; urgency=medium
+
+  * handle EINTR in poll_status instead of failing as device abnormal
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Wed, 31 Mar 2026 17:08:23 +0800
+
+cix-npu-umd (3.0.1) bookworm; urgency=medium
+
+  * Support ACPI dfs 
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Wed, 25 Mar 2026 16:54:02 +0800
+
+cix-npu-umd (3.0.0) bookworm; urgency=medium
+
+  * Update to r2p1 sdk
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 04 Nov 2025 20:30:08 +0800
+
 cix-npu-umd (2.0.1) bookworm; urgency=medium
 
-  * revert tsm local and share memory feature in npu umd.
+  * Update cross-compile head-file location
 
- -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Thu, 07 Aug 2025 15:48:34 +0800
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Mon, 15 Sep 2025 13:28:24 +0800
 
 cix-npu-umd (2.0.0) bookworm; urgency=medium
 

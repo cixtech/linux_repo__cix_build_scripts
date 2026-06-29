@@ -1,3 +1,9 @@
+cix-mesa (25.1.5) bookworm; urgency=medium
+
+  * Upgrade Mesa to 25.1.5 release
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Thu, 16 Oct 2025 11:43:30 +0800
+
 cix-mesa (24.0.4) bookworm; urgency=medium
 
   * Upgrade Mesa to 24.0.4 release

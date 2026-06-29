@@ -104,8 +104,13 @@ fi
 if [[ -e \$(ls \${WORKSPACE}/cix-npu-driver*.deb 2>/dev/null) ]]; then
     dpkg -i \${WORKSPACE}/cix-npu-driver*.deb
 fi
+
 if [[ -e \$(ls \${WORKSPACE}/cix-noe-umd*.deb 2>/dev/null) ]]; then
     dpkg -i \${WORKSPACE}/cix-noe-umd*.deb
+fi
+
+if [[ -e \$(ls \${WORKSPACE}/cix-ai-engine*.deb 2>/dev/null) ]]; then
+    dpkg -i \${WORKSPACE}/cix-ai-engine*.deb
 fi
 
 if [[ -e \$(ls \${WORKSPACE}/cix-npu-onnxruntime*.deb 2>/dev/null) ]]; then
@@ -239,6 +244,11 @@ fi
 if [ $DEBIAN_MODE == 6 ]; then
     if [[ -e \$(ls \${WORKSPACE}/cix-gstreamer*.deb 2>/dev/null) ]]; then
         rm -rf \${WORKSPACE}/cix-gstreamer*.deb 
+    fi
+
+    if [[ -e \$(ls \${WORKSPACE}/cix-ffmpeg*.deb 2>/dev/null) ]]; then
+        rm -rf \${WORKSPACE}/cix-libav*.deb
+        rm -rf \${WORKSPACE}/cix-ffmpeg*.deb
     fi
 
     find  \${WORKSPACE}  -type f \( ! -name "cix*" -a ! -name "linux*" \) -exec rm {} \;

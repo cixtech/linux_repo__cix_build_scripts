@@ -7,21 +7,45 @@
 #  and contain its proprietary and confidential information.
 #
 
+function init_env() {
+    if [[ ! -e "${PATH_ROOT}/ext" ]]; then
+        cd "${PATH_ROOT}/build-scripts"
+        if [[ "$(git remote -v | grep "github.com")X" != "X" ]]; then
+            echo -e "${RED}Error: resources (ext) are absent. please download them from github first.${NORMAL}"
+            exit 1
+        fi
+        cd -
+
+        source "${PATH_ROOT}/build-scripts/envtool.sh"
+        export EX_CUSTOMER="customer_linux"
+        export EX_PROJECT="2025q3"
+        export EX_VERSION="26q2_rc4"
+        updateres
+    fi
+
+    if [[ ! -e "${PATH_ROOT}/ext" ]]; then
+        echo -e "${RED}Error: resources (ext) are absent. maybe doing next can help you.${NORMAL}"
+        cat <<EOF
+source ./build-scripts/envtool.sh
+updateres
+EOF
+        exit 1
+    fi
+}
+
 for_each_build_script() {
     local scripts=(
-        "build-dm-verity.sh"
-        "build-vpu_test.sh"
-        "build-kernel.sh"
         "build-firmware-radxa-O6.sh"
-        "build-vpu_driver.sh"
-        "build-npu-driver.sh"
+        "build-dm-verity.sh"
+        "build-kernel.sh"
+        "build-cix-gpu-dkms.sh"
         "build-csidma-driver.sh"
         "build-isp-driver.sh"
         "build-isp-driver-v4l2.sh"
+        "build-npu-driver.sh"
+        "build-vpu_test.sh"
+        "build-vpu_driver.sh"
         "build-gpu-driver.sh"
-        "build-cix-gpu-dkms.sh"
-        "build-gstreamer.sh"
-        "build-ffmpeg.sh"
         "build-tool.sh"
         "build-prideb.sh"
         "build-cix-env.sh"
@@ -39,6 +63,7 @@ for_each_build_script() {
 
 readonly DO_DESC_build="build all modules"
 do_build() {
+    init_env
     if [[ -e "${PATH_ROOT}/output" ]]; then
         cp -drfp "${PATH_ROOT}/ext/output" "${PATH_ROOT}"
     fi
@@ -50,6 +75,7 @@ do_build() {
 
 readonly DO_DESC_clean="clean all modules"
 do_clean() {
+    init_env
     for_each_build_script clean
     if [[ -e "${PATH_ROOT}/output" ]]; then
         sudo rm -rf "${PATH_ROOT}/output"
@@ -58,30 +84,6 @@ do_clean() {
         sudo rm -rf "${PATH_ROOT}/out"
     fi
 }
-
-if [[ ! -e "${PATH_ROOT}/ext" ]]; then
-    cd "${PATH_ROOT}/build-scripts"
-    if [[ "$(git remote -v | grep "github.com")X" != "X" ]]; then
-        echo -e "${RED}Error: resources (ext) are absent. please download them from github first.${NORMAL}"
-        exit 1
-    fi
-    cd -
-
-    source "${PATH_ROOT}/build-scripts/envtool.sh"
-    export EX_CUSTOMER="customer_linux"
-    export EX_PROJECT="2025q3"
-    export EX_VERSION="25q4_rc3.5"
-    updateres
-fi
-
-if [[ ! -e "${PATH_ROOT}/ext" ]]; then
-    echo -e "${RED}Error: resources (ext) are absent. maybe doing next can help you.${NORMAL}"
-cat <<EOF
-source ./build-scripts/envtool.sh
-updateres
-EOF
-    exit 1
-fi
 
 source "$(dirname ${BASH_SOURCE[0]})/framework.sh"
 

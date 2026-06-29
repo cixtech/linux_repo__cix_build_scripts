@@ -1,0 +1,5 @@
+linux-image-close (6.6.89) bookworm; urgency=medium
+
+  * Init linux-image-close (closed-source kernel 6.6)
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 15 Apr 2026 10:00:00 +0800

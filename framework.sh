@@ -8,8 +8,9 @@
 #
 
 export CIX_VERSION="Beta_2.1.5_release"
-export CIX_Deepin_VERSION="Beta_1.0.2_release"
+export CIX_Deepin_VERSION="Beta_2.1.5_release"
 export CIX_Kylin_VERSION="Beta_2.0.0_release"
+export debian_compile_version="2025.10.23-1"
 export debian_cc_version="2025.04.28-1"
 export ubuntu_cc_version="2025.7.09"
 export CIX_CONST_ROOT_UUID="acfba1d2-b17b-40c1-b3a9-e5135c49efa0"
@@ -464,6 +465,42 @@ function getPkgVer() {
     fi
 }
 
+readonly NOINSTALL_DEB_PACKAGES=(
+    "cix-gpu-dkms"
+    "cix-vpu-driver-dkms"
+    "cix-vpu-firmware"
+    "cix-npu-driver-dkms"
+    "cix-grub-config"
+    "cix-debian12-k6.6.89-driver"
+    "cix-debian12-k6.6.89-driver-full"
+)
+
+function cix_is_noinstall_deb_package() {
+    local package_name="$1"
+    local noinstall_package
+    for noinstall_package in "${NOINSTALL_DEB_PACKAGES[@]}"; do
+        if [[ "${noinstall_package}" == "${package_name}" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+function cix_deb_output_dir() {
+    local package_name="$1"
+    if cix_is_noinstall_deb_package "${package_name}"; then
+        echo "${PATH_DEB_NOINSTALL}"
+    else
+        echo "${PATH_DEB}"
+    fi
+}
+
+function cix_remove_deb_artifacts() {
+    local package_pattern="$1"
+    rm -f "${PATH_DEB}/${package_pattern}" "${PATH_DEB_NOINSTALL}/${package_pattern}"
+}
+
+
 function create_cix_deb() {
     local pkg_Name="$1"
 
@@ -473,6 +510,7 @@ function create_cix_deb() {
     pkg_Ver=$(getPkgVer $pkg_Name)
 
     local build_deb_dir="${PATH_OUT_DEB_PACKAGES}/${pkg_Name}"
+    local output_dir="$(cix_deb_output_dir "${pkg_Name}")"
 
     case "$pkg_Name" in
     ("cix-mesa")
@@ -568,14 +606,15 @@ Description: $pkg_Name package"
 
     chmod -R 755 "$build_deb_dir"
     chmod -R g-s "$build_deb_dir"
-    rm -f ${PATH_DEB}/${pkg_Name}_*.deb
-    dpkg-deb -b --root-owner-group "$build_deb_dir" "${PATH_DEB}/${pkg_Name}_${pkg_Ver}_arm64.deb"
+    cix_remove_deb_artifacts "${pkg_Name}_*.deb"
+    dpkg-deb -b --root-owner-group "$build_deb_dir" "${output_dir}/${pkg_Name}_${pkg_Ver}_arm64.deb"
 }
 
 function cix_deb_package() {
     local packageName="$1"
     local packageFile="$2"
     local path="$3" #"${PATH_OUT}/deb_packages/${packageName}"
+    local output_dir="$(cix_deb_output_dir "${packageName}")"
     if [[ -e "${path}/DEBIAN" ]]; then
         rm -rf "${path}/DEBIAN"
     fi
@@ -669,7 +708,9 @@ EOF
     chmod -R 755 "${path}"
     chmod -R g-s "${path}"
 
-    dpkg -b "${path}" "${PATH_DEB}/${packageFile}"
+    cix_remove_deb_artifacts "${packageName}_*.deb"
+    rm -f "${PATH_DEB}/${packageFile}" "${PATH_DEB_NOINSTALL}/${packageFile}"
+    dpkg -b "${path}" "${output_dir}/${packageFile}"
 }
 
 function cix_realpath {
@@ -829,6 +870,39 @@ EOF
     fi
 }
 
+function cix_check_ccache() {
+    local path_src=$1
+    local path_dst=$2
+    echo "cix check ccache: ${path_dst} to ${path_src}"
+    if [[ ! -e "${path_src}" ]]; then
+        echo "${path_src} does not exist"
+        return
+    fi
+    if [[ ! -e "${path_dst}" ]]; then
+        mkdir -p "${path_dst}"
+    fi
+
+    cd "${path_dst}"
+    for file in ${path_src}/*
+    do
+        local filename=$(basename $file)
+        local file_dst=${path_dst}/${filename}
+        if [[ ! -e "${filename}" ]]; then
+            local file_relative=$(realpath --relative-to=./ "$path_src")
+            # echo "${filename} ${file_relative}"
+            if [[ $file == *gcc ]] || [[ $file == *g++ ]]; then
+                echo "#!/usr/bin/env bash
+
+ccache ${file_relative}/${filename} \"\$@\"" > "${filename}"
+                chmod +x "${filename}"
+            else
+                ln -s "${file_relative}/${filename}" "${filename}"
+            fi
+        fi
+    done
+    cd -
+}
+
 # custom text set by the component script
 readonly DO_DESC_build
 readonly DO_DESC_clean
@@ -872,18 +946,19 @@ else
 fi
 
 export PATH_ROOT="$WORKSPACE_DIR"
-export CCACHE="0"
-# if [ -e "/usr/bin/ccache" ]; then
-#   export CCACHE="1"
-#   if [ -e "/data/.c/ccache" ]; then
-#     ccache -o cache_dir=/data/.c/ccache
-#     ccache -o max_size=60G
-#   else
-#     ccache -o max_size=20G
-#   fi
-# else
-#   export CCACHE="0"
-# fi
+export CIX_CCACHE="${CIX_CCACHE:-0}"
+export CIX_CCACHE_EXEC="${CIX_CCACHE_EXEC:-/usr/bin/ccache}"
+export CIX_CCACHE_PATH="${CIX_CCACHE_PATH:-/data/.c/ccache}"
+if [[ "${CIX_CCACHE}" == "1" ]]; then
+    if [ -e "${CIX_CCACHE_EXEC}" ]; then
+        if [ -e "${CIX_CCACHE_PATH}" ]; then
+            ccache -o cache_dir=${CIX_CCACHE_PATH}
+            ccache -o max_size=60G
+        else
+            ccache -o max_size=20G
+        fi
+    fi
+fi
 
 if [[ "$FIRST_MODULE" == "1" ]]; then
     startTime=$(date +%s%3N)
@@ -923,17 +998,24 @@ export ARM_TOOLCHAIN_ELF=gcc-arm-10.2-2020.11-x86_64-aarch64-none-elf
 export ARM_TOOLCHAIN_EABI=gcc-arm-none-eabi-10.3-2021.10-x86_64-linux
 export ARM_TOOLCHAIN_EXTRA=$ARM_TOOLCHAIN #gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu #${ARM_TOOLCHAIN} for the end user, temporary for 3588
 
-if [[ $CCACHE == "1" ]]; then
+if [[ $CIX_CCACHE == "1" ]]; then
 export CROSS_COMPILE="${PATH_ROOT}/build-scripts/ccache-gcc/${ARM_TOOLCHAIN}/bin/aarch64-none-linux-gnu-"
 export CROSS_COMPILE_ELF="${PATH_ROOT}/build-scripts/ccache-gcc/${ARM_TOOLCHAIN_ELF}/bin/aarch64-none-elf-"
 export CROSS_COMPILE_EABI="${PATH_ROOT}/build-scripts/ccache-gcc/${ARM_TOOLCHAIN_EABI}/bin/arm-none-eabi-"
 export CROSS_COMPILE_EXTRA="${PATH_ROOT}/build-scripts/ccache-gcc/${ARM_TOOLCHAIN_EXTRA}/bin/aarch64-none-linux-gnu-"
+cix_check_ccache "${PATH_ROOT}/tools/gcc/${ARM_TOOLCHAIN}/bin" "${PATH_ROOT}/build-scripts/ccache-gcc/${ARM_TOOLCHAIN}/bin"
+cix_check_ccache "${PATH_ROOT}/tools/gcc/${ARM_TOOLCHAIN_ELF}/bin" "${PATH_ROOT}/build-scripts/ccache-gcc/${ARM_TOOLCHAIN_ELF}/bin"
+cix_check_ccache "${PATH_ROOT}/tools/gcc/${ARM_TOOLCHAIN_EABI}/bin" "${PATH_ROOT}/build-scripts/ccache-gcc/${ARM_TOOLCHAIN_EABI}/bin"
+cix_check_ccache "${PATH_ROOT}/tools/gcc/${ARM_TOOLCHAIN_EXTRA}/bin" "${PATH_ROOT}/build-scripts/ccache-gcc/${ARM_TOOLCHAIN_EXTRA}/bin"
 else
 export CROSS_COMPILE="${PATH_ROOT}/tools/gcc/${ARM_TOOLCHAIN}/bin/aarch64-none-linux-gnu-"
 export CROSS_COMPILE_ELF="${PATH_ROOT}/tools/gcc/${ARM_TOOLCHAIN_ELF}/bin/aarch64-none-elf-"
 export CROSS_COMPILE_EABI="${PATH_ROOT}/tools/gcc/${ARM_TOOLCHAIN_EABI}/bin/arm-none-eabi-"
 export CROSS_COMPILE_EXTRA="${PATH_ROOT}/tools/gcc/${ARM_TOOLCHAIN_EXTRA}/bin/aarch64-none-linux-gnu-"
 fi
+export PATH_DEBIAN="${PATH_DEBIAN:-}"
+export PATH_DEB="${PATH_DEB:-}"
+export PATH_DEB_NOINSTALL="${PATH_DEB_NOINSTALL:-}"
 
 case "$FILESYSTEM" in
 ("debian")
@@ -947,6 +1029,7 @@ export PRIVATE_DEB_PACKAGES=("cix-dpu-ddk" "cix-npu-umd" "cix-isp-umd" "cix-gpu-
 #export PATH_DEBIAN="${PATH_OUT}/debian_desktop"
 export PATH_DEBIAN="${PATH_OUT}/debian"
 export PATH_DEB="${PATH_OUT}/debs"
+export PATH_DEB_NOINSTALL="${PATH_OUT}/debs-noinstall"
 export PATH_DEBIAN_COMPILE="${PATH_OUT}/debian_compile"
 export PATH_DEBIAN_COMPILE_mutter="${PATH_OUT}/debian_compile_mutter"
 export PATH_DEBIAN_COMPILE_debian_cc="${PATH_OUT}/debian_cc"
@@ -979,8 +1062,8 @@ if [[ ! -e "${PATH_OUT}/images" ]]; then
     mkdir -p "${PATH_OUT}/images"
 fi
 
-SYSROOT_VERSION="20251029-1"
-REMOTE_SYSROOT_MD5="97af9ea2907e1ce3c8ba9c48eb8545cd"
+SYSROOT_VERSION="20260204-1"
+REMOTE_SYSROOT_MD5="908849dc70aff2e39c82bf8777d0a1d1"
 SYSROOT_MD5=""
 case "$FILESYSTEM" in
 ("debian")
@@ -989,6 +1072,10 @@ case "$FILESYSTEM" in
     fi
     if [[ ! -e "${PATH_DEB}" ]]; then
         mkdir -p "${PATH_DEB}"
+    fi
+
+    if [[ ! -e "${PATH_DEB_NOINSTALL}" ]]; then
+        mkdir -p "${PATH_DEB_NOINSTALL}"
     fi
 
     if [[ -e "${PATH_ROOT}/ext/mirror/cix_sysroot.tgz" ]]; then
@@ -1142,6 +1229,7 @@ case "$FILESYSTEM" in
     echo "PATH_LINUX:                    "$PATH_LINUX
     echo "PATH_DEBIAN:                   "$PATH_DEBIAN
     echo "PATH_DEB:                      "$PATH_DEB
+    echo "PATH_DEB_NOINSTALL:            "$PATH_DEB_NOINSTALL
     echo "PATH_OUT_ROOTFS:               "$PATH_OUT_ROOTFS
     #echo "PATH_EXPORT_INCLUDE:           "$PATH_EXPORT_INCLUDE
     #echo "PATH_EXPORT_LIB:               "$PATH_EXPORT_LIB

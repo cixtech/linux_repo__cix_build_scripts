@@ -27,7 +27,7 @@ do_build() {
     local target
     case "$PLATFORM" in
     ("cix")
-        config_file="defconfig cix.config"
+        config_file="defconfig cix.config cix_docker.config"
         if [[ "${DOCKER_MODE}" == "docker" ]]; then
             config_file="${config_file} cix_redroid.config"
         fi
@@ -91,7 +91,11 @@ do_build() {
     make ARCH=arm64 CROSS_COMPILE="${CROSS_COMPILE}" LOCALVERSION="-generic" headers_install INSTALL_HDR_PATH="${PATH_SYSROOT}"
     if [[ $INPUT != "nodeb" ]]; then
         rm -rf $PATH_DEB/linux*.deb
-        make ARCH=arm64 CROSS_COMPILE="${CROSS_COMPILE}" LOCALVERSION="-generic" ${config_file} bindeb-pkg -j${PARALLELISM}
+        local _kdeb_pkgversion
+        _kdeb_pkgversion=$(getPkgVer "linux-image-close")
+        make ARCH=arm64 CROSS_COMPILE="${CROSS_COMPILE}" LOCALVERSION="-generic" \
+            ${_kdeb_pkgversion:+KDEB_PKGVERSION="${_kdeb_pkgversion}"} \
+            ${config_file} bindeb-pkg -j${PARALLELISM}
         rm -rf $PATH_ROOT/linux-upstream*
         mv -f $PATH_ROOT/linux*.deb $PATH_DEB
         if [[ -e "${PATH_ROOT}/build-scripts/debian/dkms/linux/scripts" ]]; then
@@ -139,7 +143,7 @@ do_dts() {
     local target
     case "$PLATFORM" in
     ("cix")
-        config_file="defconfig cix.config"
+        config_file="defconfig cix.config cix_docker.config"
         if [[ "$BUILD_MODE" == "debug" ]]; then
             config_file="${config_file} cix_debug.config"
         fi

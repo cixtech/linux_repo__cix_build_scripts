@@ -10,7 +10,6 @@
 SOC_TYPE="sky1_a0"
 readonly SOC_TYPE_OPTIONS=(
     "sky1_a0"
-    "sky1_b1"
 )
 
 BOARD="evb"

@@ -1,22 +1,52 @@
-cix-mnn (1.2.1) bookworm; urgency=medium
+cix-mnn (1.3.0) trixie; urgency=medium
+
+  * Update mnn to 3.3.0 tag
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Wed, 21 Jan 2026 16:04:26 +0800
+
+cix-mnn (1.2.5) trixie; urgency=medium
+
+  * Add install-whl packages support py3.10,py3.11,and py3.12.
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Mon, 21 Dec 2025 16:01:00 +0800
+
+cix-mnn (1.2.4) trixie; urgency=medium
+
+  * Fix pymnn function
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Mon, 17 Nov 2025 17:01:12 +0800
+
+cix-mnn (1.2.3) trixie; urgency=medium
+
+  * Add pymnn support
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 21 Oct 2025 14:23:12 +0800
+
+cix-mnn (1.2.2) trixie; urgency=medium
+
+  * Update mnn to 3.2.4 tag
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Fri, 17 Oct 2025 14:49:03 +0800
+
+cix-mnn (1.2.1) trixie; urgency=medium
 
   * Enable KleidiAI
 
  -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Fri, 08 Aug 2025 19:52:35 +0800
 
-cix-mnn (1.2.0) bookworm; urgency=medium
+cix-mnn (1.2.0) trixie; urgency=medium
 
   * Update mnn to 3.2.0 tag
 
  -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 24 Jun 2025 13:50:53 +0800
 
-cix-mnn (1.1.0) bookworm; urgency=medium
+cix-mnn (1.1.0) trixie; urgency=medium
 
   * Update mnn to 3.1.3 tag
 
  -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Tue, 06 May 2025 17:53:08 +0800
 
-cix-mnn (1.0.0) bookworm; urgency=medium
+cix-mnn (1.0.0) trixie; urgency=medium
 
   * Init cix-mnn
 

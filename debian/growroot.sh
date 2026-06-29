@@ -43,14 +43,20 @@ grow_root() {
             return
         fi
         local totalSize=$(cat /proc/partitions | grep "$(echo ${device} | awk -F '/' '{print $NF}')" | head -n 1 | awk '{print $3}')
-        local gptSize=$(/bin/cix-gpt -f ${device} --dump | grep "backup lba: " | awk -F "backup lba: " '{print $2}')
+        local bs=512
+        local gptSize=$(/bin/cix-gpt -f ${device} --dump -s ${bs} | grep "backup lba: " | awk -F "backup lba: " '{print $2}')
+        if [ "$gptSize" == "" ]; then
+            bs=4096
+            gptSize=$(/bin/cix-gpt -f ${device} --dump -s ${bs} | grep "backup lba: " | awk -F "backup lba: " '{print $2}')
+        fi
         totalSize=$((${totalSize} / 1024 / 1024))
-        gptSize=$((${gptSize} * 512 / 1024 / 1024 / 1024))
+        gptSize=$((${gptSize} * ${bs} / 1024 / 1024 / 1024))
         if [ ! -e /tmp/rootfs ]; then
             mkdir -p /tmp/rootfs
         fi
         mount $root /tmp/rootfs
-        local dfSize=$(($(df | grep $root | awk '{print $2}') / 1024 / 1024))
+        # local dfSize=$(($(df | grep $root | awk '{print $2}') / 1024 / 1024))
+        local dfSize=$(($(dumpe2fs -h ${root} 2>/dev/null | grep "Block count" | awk -F ":" '{print $2}' | awk '{print $1}') * $(dumpe2fs -h ${root} 2>/dev/null | grep "Block size" | awk -F ":" '{print $2}' | awk "{print $1}") / 1024 / 1024 / 1024))
         umount /tmp/rootfs
         rm -rf /tmp/rootfs
         local fdiskSize=$(cat /proc/partitions | grep "$(echo ${root} | awk -F '/' '{print $NF}')" | head -n 1 | awk '{print $3}')

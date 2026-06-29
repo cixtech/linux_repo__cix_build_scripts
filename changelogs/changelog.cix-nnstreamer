@@ -1,3 +1,11 @@
+cix-nnstreamer (2.4.2-1) bookworm; urgency=medium
+
+  * integrate CME, import zero-copy path
+  * add cpp plugin
+  * add new demo
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Fri, 22 May 2026 17:51:43 +0800
+
 cix-nnstreamer (2.4.2) bookworm; urgency=medium
 
   * Init cix-nnstreamer

@@ -1,0 +1,5 @@
+cix-unit-test (1.0.0) bookworm; urgency=medium
+
+  * Integrate ai tests for noe, llamacpp, and onnxruntime
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Mon, 29 Dec 2025 15:55:03 +0800
