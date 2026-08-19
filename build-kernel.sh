@@ -27,7 +27,10 @@ do_build() {
     local target
     case "$PLATFORM" in
     ("cix")
-        config_file="defconfig cix.config cix_docker.config"
+        config_file="defconfig cix.config"
+	if [ -f "$path_kernel/arch/arm64/configs/cix_docker.config" ]; then
+		config_file="${config_file} cix_docker.config"
+	fi
         if [[ "${DOCKER_MODE}" == "docker" ]]; then
             config_file="${config_file} cix_redroid.config"
         fi
@@ -143,7 +146,10 @@ do_dts() {
     local target
     case "$PLATFORM" in
     ("cix")
-        config_file="defconfig cix.config cix_docker.config"
+        config_file="defconfig cix.config"
+	if [ -f "$path_kernel/arch/arm64/configs/cix_docker.config" ]; then
+		config_file="${config_file} cix_docker.config"
+	fi
         if [[ "$BUILD_MODE" == "debug" ]]; then
             config_file="${config_file} cix_debug.config"
         fi

@@ -19,7 +19,7 @@ function init_env() {
         source "${PATH_ROOT}/build-scripts/envtool.sh"
         export EX_CUSTOMER="customer_linux"
         export EX_PROJECT="2025q3"
-        export EX_VERSION="26q2_rc4"
+        export EX_VERSION="26q3_rc2.3"
         updateres
     fi
 

@@ -494,6 +494,7 @@ do_boot() {
                     -o "${PATH_OUT}/images/boot_os.img" \
                     -s "${boot_size}" \
                     -l "ESP" \
+                    -i "${volume_id}" \
                     "${PATH_OUT}/grub.efi" "/EFI/BOOT/BOOTAA64.EFI" \
                     "${SCRIPT_DIR}/grub.cfg" "/grub/grub.cfg" \
                     "${PATH_OUT}/Image" "/Image" \
@@ -518,6 +519,7 @@ do_boot() {
             -o "${PATH_OUT}/images/boot.img" \
             -s "${boot_size}" \
             -l "ESP" \
+            -i "${volume_id}" \
             "${PATH_OUT}/grub.efi" "/EFI/BOOT/BOOTAA64.EFI" \
             "${SCRIPT_DIR}/grub.cfg" "/grub/grub.cfg" \
             "${PATH_OUT}/Image" "/Image" \

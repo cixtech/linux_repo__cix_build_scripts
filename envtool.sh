@@ -50,7 +50,7 @@ NC=${NC-\e[0m}
 
 EX_CUSTOMER="customer_linux"
 EX_PROJECT="2025q3"
-EX_VERSION="26q2_rc4"
+EX_VERSION="26q3_rc2.3"
 EX_NEXUS_USER="svc.public"
 EX_NEXUS_PASS="svc.public"
 USERDATA_RESIZE="enable"

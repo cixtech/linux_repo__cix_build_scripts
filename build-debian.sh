@@ -759,8 +759,8 @@ do_build() {
                 sudo cp -f "${PATH_ROOT}/build-scripts/debian/growroot_hook" "${PATH_DEBIAN}/usr/share/initramfs-tools/hooks/growroot"
                 sudo chmod +x "${PATH_DEBIAN}/usr/share/initramfs-tools/hooks/growroot"
             fi
-            if [[ -e "${PATH_CIX_BINARY}/device/images/cix-gpt" ]]; then
-                sudo cp -f "${PATH_CIX_BINARY}/device/images/cix-gpt" "${PATH_DEBIAN}/bin/cix-gpt"
+            if [[ -e "${PATH_ROOT}/build-scripts/debian/cix-gpt" ]]; then
+                sudo cp -f "${PATH_ROOT}/build-scripts/debian/cix-gpt" "${PATH_DEBIAN}/bin/cix-gpt"
                 sudo chmod +x "${PATH_DEBIAN}/bin/cix-gpt"
             fi
             sudo chown -R 6:12 ${PATH_DEBIAN}/var/cache/man
@@ -883,7 +883,95 @@ update-initramfs -c -k ${linux_version} -b /boot
         mkdir "${PATH_ROOT}/tmp"
         echo "${script}" > "${PATH_ROOT}/tmp/install.sh"
         chmod +x "${PATH_ROOT}/tmp/install.sh"
-        sudo sh -c "echo 'UUID=$uuid / ext4 errors=remount-ro 0 1' >> $PATH_DEBIAN/etc/fstab"
+        sudo sh -c "echo 'UUID=${uuid} / ext4 errors=remount-ro 0 1' > $PATH_DEBIAN/etc/fstab"
+        sudo sh -c "echo 'UUID=${volume_id:0:4}-${volume_id:4:4} /boot/efi vfat umask=0077 0 1' >> $PATH_DEBIAN/etc/fstab"
+
+        sudo mkdir -p ${PATH_DEBIAN}/etc/kernel/postinst.d
+        sudo tee "${PATH_DEBIAN}/etc/kernel/postinst.d/90-copy-kernel-to-esp" > /dev/null << 'EOF'
+#!/bin/sh
+set -ex
+
+version="$1"
+
+BOOT_DIR="/boot"
+ESP_DIR="/boot/efi"
+
+VMLINUX="$BOOT_DIR/vmlinuz-$version"
+INITRD="$BOOT_DIR/initrd.img-$version"
+
+ESP_VMLINUX="$ESP_DIR/vmlinuz-$version"
+ESP_INITRD="$ESP_DIR/initrd.img-$version"
+
+[ -d "$ESP_DIR" ] || exit 0
+[ -f "$VMLINUX" ] || exit 0
+
+echo "Copying kernel $version to EFI System Partition"
+
+cp -f "$VMLINUX" "$ESP_VMLINUX"
+
+if [ -f "$INITRD" ]; then
+    cp -f "$INITRD" "$ESP_INITRD"
+fi
+
+DTB_SRC_DIR="/usr/lib/linux-image-$version/cix"
+
+if [ -d "$DTB_SRC_DIR" ]; then
+    echo "Copying DTBs from $DTB_SRC_DIR to $ESP_DIR"
+    for dtb in "$DTB_SRC_DIR"/*.dtb; do
+        [ -f "$dtb" ] || continue
+        cp -f "$dtb" "$ESP_DIR/"
+    done
+fi
+
+sync
+
+# Update GRUB.CFG to use new kernel and initrd versions
+GRUB_CFG="$ESP_DIR/GRUB/GRUB.CFG"
+if [ -f "$GRUB_CFG" ]; then
+    echo "Updating GRUB.CFG with new kernel version $version"
+    # Replace linux /vmlinuz-* with linux /vmlinuz-$version (preserve trailing backslash if present)
+    sed -i "s|\(linux /vmlinuz-\)[^ \\]*\(.*\)|\1$version\2|g" "$GRUB_CFG"
+    # Replace initrd /initrd.img-* with initrd /initrd.img-$version, but skip rootfs.cpio.gz
+    sed -i "/initrd \/rootfs\.cpio\.gz/! s|\(initrd /initrd\.img-\)[^ ]*|\1$version|g" "$GRUB_CFG"
+    sync
+fi
+
+depmod -a || true
+
+exit 0
+
+EOF
+        sudo chmod a+x ${PATH_DEBIAN}/etc/kernel/postinst.d/90-copy-kernel-to-esp
+        sudo mkdir -p ${PATH_DEBIAN}/etc/kernel/postrm.d
+        sudo tee "${PATH_DEBIAN}/etc/kernel/postrm.d/90-remove-kernel-from-esp" > /dev/null << 'EOF'
+#!/bin/sh
+set -ex
+
+version="$1"
+
+BOOT_DIR="/boot"
+ESP_DIR="/boot/efi"
+
+ESP_VMLINUX="$ESP_DIR/vmlinuz-$version"
+ESP_INITRD="$ESP_DIR/initrd.img-$version"
+
+[ -d "$ESP_DIR" ] || exit 0
+
+echo "Removing kernel $version from EFI System Partition"
+
+rm -f "$ESP_VMLINUX"
+rm -f "$ESP_INITRD"
+
+for dtb in "$ESP_DIR"/*.dtb; do
+    [ -f "$dtb" ] || continue
+    rm -f "$dtb"
+done
+
+sync
+
+exit 0
+EOF
+        sudo chmod a+x ${PATH_DEBIAN}/etc/kernel/postrm.d/90-remove-kernel-from-esp
         if [[ -e "$PATH_DEBIAN/usr/share/initramfs-tools/hooks/fsck" ]]; then
             sudo sed -i '98,100d' $PATH_DEBIAN/usr/share/initramfs-tools/hooks/fsck
             sudo sed -i '99i\copy_exec /sbin/fsck.ext4' $PATH_DEBIAN/usr/share/initramfs-tools/hooks/fsck
@@ -921,6 +1009,11 @@ export GTK_IM_MODULE=fcitx
 
         sudo rm -f "${PATH_DEBIAN}/install.sh"
         sudo rm -rf "${PATH_DEBIAN}/debs"
+
+        # Clean machine-specific identifiers and network connections
+        sudo rm -f "${PATH_DEBIAN}/etc/machine-id"
+        sudo rm -f "${PATH_DEBIAN}/var/lib/dbus/machine-id"
+        sudo rm -rf "${PATH_DEBIAN}/etc/NetworkManager/system-connections/"
 
         sudo rm -rf "${PATH_ROOT}/tmp"
         NEW_HOSTNAME="cix-localhost"

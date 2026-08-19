@@ -314,25 +314,25 @@ EOF
 
         #isp-umd
         pkg_Name="cix-isp-umd"
-        rm -rf ${PATH_OUT_DEB_PACKAGES}/$pkg_Name
-        cp -r ${PATH_OUT_PRIVATE_DEB_PACKAGES}/${pkg_Name} ${PATH_OUT_DEB_PACKAGES}/$pkg_Name
-        build_deb_dir=${PATH_OUT_DEB_PACKAGES}/$pkg_Name
-        if [ ! -e $build_deb_dir/etc/systemd/system ]; then
-            mkdir -p $build_deb_dir/etc/systemd/system
-        fi
-        rm -rf  $build_deb_dir/etc/systemd/system/load-isp-modules.service 
-	if [ ! -e $build_deb_dir/usr/bin ]; then
-            mkdir -p $build_deb_dir/usr/bin
-        fi
-        
-	rm -rf  $build_deb_dir/usr/bin/load-isp-modules.sh
-        if [[ ! -e $build_deb_dir/DEBIAN ]]; then
-            mkdir -p $build_deb_dir/DEBIAN
-        fi
-        cat > $build_deb_dir/etc/systemd/system/isp-daemon.service <<- EOF
+        if [[ -e "${PATH_OUT_PRIVATE_DEB_PACKAGES}/${pkg_Name}" ]]; then
+            rm -rf ${PATH_OUT_DEB_PACKAGES}/$pkg_Name
+            cp -r ${PATH_OUT_PRIVATE_DEB_PACKAGES}/${pkg_Name} ${PATH_OUT_DEB_PACKAGES}/$pkg_Name
+            build_deb_dir=${PATH_OUT_DEB_PACKAGES}/$pkg_Name
+            if [ ! -e $build_deb_dir/etc/systemd/system ]; then
+                mkdir -p $build_deb_dir/etc/systemd/system
+            fi
+            rm -rf  $build_deb_dir/etc/systemd/system/load-isp-modules.service
+            if [ ! -e $build_deb_dir/usr/bin ]; then
+                mkdir -p $build_deb_dir/usr/bin
+            fi
+            rm -rf  $build_deb_dir/usr/bin/load-isp-modules.sh
+            if [[ ! -e $build_deb_dir/DEBIAN ]]; then
+                mkdir -p $build_deb_dir/DEBIAN
+            fi
+            cat > $build_deb_dir/etc/systemd/system/isp-daemon.service <<- 'EOF'
 [Unit]
 Description=ISP Daemon
-After=network.target 
+After=network.target
 
 [Service]
 WorkingDirectory=/usr/share/cix/bin
@@ -347,10 +347,10 @@ StartLimitBurst=5
 [Install]
 WantedBy=multi-user.target
 EOF
-    if [[ ! -e $build_deb_dir/DEBIAN ]]; then
-        mkdir -p $build_deb_dir/DEBIAN
-    fi
-    cat > $build_deb_dir/DEBIAN/postinst <<- EOF
+            if [[ ! -e $build_deb_dir/DEBIAN ]]; then
+                mkdir -p $build_deb_dir/DEBIAN
+            fi
+            cat > $build_deb_dir/DEBIAN/postinst <<- 'EOF'
 #!/bin/sh
 set -e
 
@@ -359,8 +359,9 @@ systemctl enable isp-daemon.service || true
 
 exit 0
 EOF
-        create_cix_deb "$pkg_Name"
+            create_cix_deb "$pkg_Name"
         fi
+    fi
 
     #gpu
     build_gpu_umd_prideb cix-gpu-umd

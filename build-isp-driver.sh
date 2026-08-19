@@ -9,7 +9,7 @@
 
 DEPENDENT_MODULES="build-kernel.sh"
 
-readonly DO_DESC_build="build isp driver and embed into debian system"
+readonly DO_DESC_build="build isp driver (armcb_isp.ko) and embed into cix-isp-driver deb"
 do_build() {
     export ARCH=arm64
     export DRV_DIR=${PATH_ROOT}/linux/drivers/media/platform/cix/cix_isp
@@ -18,6 +18,8 @@ do_build() {
 
     cd "${DRV_DIR}"
     echo -e "Build isp driver..."
+    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j${PARALLELISM} build
+    cd -
 
     if [ -f ${DRV_DIR}/${MODULE}.ko ]; then
         # build deb package
@@ -31,11 +33,11 @@ do_build() {
         mkdir -p "$build_deb_dir/DEBIAN"
         echo "#!/bin/bash" > ${debian_dir}/postinst
         echo "depmod ${linux_version} -a" >> ${debian_dir}/postinst
-	create_cix_deb "${pkg_Name}"
+        create_cix_deb "${pkg_Name}"
         # finish build deb package
     else
         echo error ${MODULE}.ko module not exist
-        exit
+        exit 1
     fi
 }
 

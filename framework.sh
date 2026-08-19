@@ -470,6 +470,8 @@ readonly NOINSTALL_DEB_PACKAGES=(
     "cix-vpu-driver-dkms"
     "cix-vpu-firmware"
     "cix-npu-driver-dkms"
+    "armcb-isp-dkms"
+    "armcb-isp-v4l2-dkms"
     "cix-grub-config"
     "cix-debian12-k6.6.89-driver"
     "cix-debian12-k6.6.89-driver-full"
@@ -737,6 +739,17 @@ copy_dir() {
     else
         $FORCE rsync -arh $1 $2
     fi
+}
+
+function cix_del_path() {
+    local FORCE=""
+    if [[ ! -e "$1" ]]; then
+        return
+    fi
+    if [[ $# -gt 1 ]]; then
+        FORCE=$2
+    fi
+    $FORCE rm -rf $1 || true
 }
 
 function cix_download() { #-s <src> -f <saved path> -d <expend path> -b <backup file> -p <cmd prefix[sudo]> -m <md5>
@@ -1053,6 +1066,17 @@ esac
 if [[ ! -e "${PATH_OUT}" ]]; then
     mkdir -p "${PATH_OUT}"
 fi
+
+# Volume ID for boot partition UUID - persistent across build steps
+if [[ -z "${volume_id:-}" ]]; then
+    if [[ -e "${PATH_OUT}/.volume_id" ]]; then
+        volume_id="$(cat "${PATH_OUT}/.volume_id")"
+    else
+        volume_id="$(printf '%08X' "$((RANDOM<<16 | RANDOM))")"
+        echo "${volume_id}" > "${PATH_OUT}/.volume_id"
+    fi
+fi
+export volume_id
 
 if [[ ! -e "${PATH_OUT}/parallel_logs" ]]; then
     mkdir -p "${PATH_OUT}/parallel_logs"

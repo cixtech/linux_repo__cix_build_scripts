@@ -7,7 +7,7 @@
 print_usage() {
     cat <<EOF
 Usage:
-    $0 -o OUTPUT -s SIZE [-l VOLUME-NAME] [SOURCE-FILE TARGET-FILE]...
+    $0 -o OUTPUT -s SIZE [-l VOLUME-NAME] [-i VOLUME-ID] [SOURCE-FILE TARGET-FILE]...
     $0 -h
 Create partition image file OUTPUT formatted as vfat.
 
@@ -24,6 +24,8 @@ Create partition image file OUTPUT formatted as vfat.
     -l VOLUME-NAME
        Sets the volume name (label) of the filesystem.
        The VOLUME-NAME can be up to 11 characters long. The default is no label.
+    -i VOLUME-ID
+       Set FAT Volume ID (32-bit hex, exactly 8 hex digits, e.g. 1234ABCD).
 
 The SIZE argument can be given an optional unit (example: 10K is 10*1024).
 Units are K,M,G,T,P,E,Z,Y (powers of 1024) or KB,MB,... (powers of 1000).
@@ -64,16 +66,11 @@ add_to_output() {
         [[ -t 1 ]] && printf "."
 
         FULL_DIR_PATH+="/$D"
-        # it exists?
         if mdir -i "$PARG_OUTPUT" -b "::$FULL_DIR_PATH" &>/dev/null ; then
-            # if it is a directory then it is fine
             mdir -i "$PARG_OUTPUT" -b "::$FULL_DIR_PATH/" &>/dev/null && continue
-
-            # but a file is a critical error
             echo "$FULL_DIR_PATH exists but is not a directory!" >&2
             exit 1
         fi
-
         mmd -i "$PARG_OUTPUT" "::$FULL_DIR_PATH"
     done
     mcopy -i "$PARG_OUTPUT" -D overwrite "$SRC" "::$FULL_DIR_PATH/$DST"
@@ -100,12 +97,15 @@ export MTOOLS_SKIP_CHECK=1
 declare PARG_OUTPUT=""
 declare PARG_SIZE=""
 declare PARG_VOLUME_NAME=""
+declare PARG_VOLUME_ID=""
 declare -a PARG_FILE_MAPPINGS
-while getopts "ho:s:l:" opt; do
+
+while getopts "ho:s:l:i:" opt; do
     case $opt in
     ("o") PARG_OUTPUT="$OPTARG" ;;
     ("s") PARG_SIZE="$OPTARG" ;;
     ("l") PARG_VOLUME_NAME="$OPTARG" ;;
+    ("i") PARG_VOLUME_ID="$OPTARG" ;;
     ("h")
         print_usage
         exit 0
@@ -113,6 +113,7 @@ while getopts "ho:s:l:" opt; do
     ("?")
         print_usage >&2
         exit 1
+        ;;
     esac
 done
 shift $((OPTIND-1))
@@ -133,7 +134,18 @@ if [[ -z "$PARG_SIZE" ]] ; then
 fi
 readonly PARG_SIZE
 
+# Validate Volume ID if provided
+if [[ -n "$PARG_VOLUME_ID" ]] ; then
+    if [[ ! "$PARG_VOLUME_ID" =~ ^[0-9A-Fa-f]{8}$ ]] ; then
+        echo "Invalid Volume ID: $PARG_VOLUME_ID" >&2
+        echo "Volume ID must be exactly 8 hex digits (e.g. 1234ABCD)" >&2
+        exit 1
+    fi
+    PARG_VOLUME_ID="${PARG_VOLUME_ID^^}"
+fi
+
 readonly PARG_VOLUME_NAME
+readonly PARG_VOLUME_ID
 readonly PARG_FILE_MAPPINGS=( "$@" )
 
 if [[ "$((${#PARG_FILE_MAPPINGS[@]}%2))" -eq 1 ]] ; then
@@ -158,8 +170,18 @@ else
     TARGET_SIZE="$PARG_SIZE"
 fi
 readonly TARGET_SIZE
+
 printf "" > "$PARG_OUTPUT"
 truncate --size "$TARGET_SIZE" "$PARG_OUTPUT"
-mkfs.vfat "$PARG_OUTPUT" ${PARG_VOLUME_NAME:+-n "$PARG_VOLUME_NAME"} > /dev/null
-printf "${0##*/}: Creating image..." ; for_each_file_mapping add_to_output ; echo
-printf "${0##*/}: " ; LC_ALL=C mdir -i "$PARG_OUTPUT" ::. | sed -nre 's#^[[:blank:]]*(.* bytes free)$#\1#p'
+
+mkfs.vfat "$PARG_OUTPUT" \
+    ${PARG_VOLUME_NAME:+-n "$PARG_VOLUME_NAME"} \
+    ${PARG_VOLUME_ID:+-i "$PARG_VOLUME_ID"} \
+    > /dev/null
+
+printf "${0##*/}: Creating image..."
+for_each_file_mapping add_to_output
+echo
+
+printf "${0##*/}: "
+LC_ALL=C mdir -i "$PARG_OUTPUT" ::. | sed -nre 's#^[[:blank:]]*(.* bytes free)$#\1#p'

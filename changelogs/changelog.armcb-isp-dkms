@@ -1,0 +1,5 @@
+armcb-isp-dkms (1.0.0) trixie; urgency=medium
+
+  * Init armcb-isp-dkms (cix_isp / armcb_isp.ko)
+
+ -- Cix Technology Group Co., Ltd <https://www.cixtech.com>  Thu, 09 Jul 2026 14:00:00 +0800
