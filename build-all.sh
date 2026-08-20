@@ -36,6 +36,7 @@ EOF
 for_each_build_script() {
     local scripts=(
         "build-firmware-radxa-O6.sh"
+        "build-firmware-release-Alcor.sh"
         "build-dm-verity.sh"
         "build-kernel.sh"
         "build-cix-gpu-dkms.sh"
